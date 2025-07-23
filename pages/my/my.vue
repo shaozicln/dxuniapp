@@ -1,3 +1,4 @@
+
 <template>
   <view class="my-container">
     <!-- 个人信息区域，绑定点击跳转事件 -->
@@ -47,11 +48,16 @@
     </view>
   </view>
 </template>
+<script setup lang="ts">
+import { reactive } from 'vue';
+import { navigateToWithLoading } from '@/utils/navigate/navigate';
 
-<script lang="ts">
-import { defineComponent, reactive } from 'vue'; 
+// 类型定义集中管理
+interface UserInfo {
+  avatarUrl: string;
+  nickname: string;
+}
 
-// 消息项类型定义
 interface MessageItem {
   id: number;
   title: string;
@@ -59,93 +65,44 @@ interface MessageItem {
   unread: boolean;
 }
 
-// 用户信息类型定义
-interface UserInfo {
-  avatarUrl: string;
-  nickname: string;
-}
-
-export default defineComponent({
-  name: 'MyPage',
-  setup() {
-    // 用户信息响应式数据
-    const userInfo = reactive<UserInfo>({
-      avatarUrl: '/static/default-avatar.png', 
-      nickname: '用户姓名' 
-    });
-
-    // 消息列表响应式数据
-    const messageList = reactive<MessageItem[]>([
-      {
-        id: 1,
-        title: '系统通知',
-        content: '您有一条新的系统通知内容...',
-        unread: true 
-      },
-      {
-        id: 2,
-        title: '互动消息',
-        content: '有人给您点了一个赞',
-        unread: false 
-      },
-      {
-        id: 3,
-        title: '新消息测试',
-        content: '这是一条未读测试消息',
-        unread: true 
-      }
-    ]);
-
-    // 消息项点击事件
-    const handleItemTap = (item: MessageItem) => {
-      console.log('点击了消息：', item);
-    };
-
-    // 取消未读状态
-    const cancelUnread = (index: number) => {
-      messageList[index].unread = false;
-    };
-
-    // 删除消息
-    const deleteMessage = (index: number) => {
-      messageList.splice(index, 1);
-    };
-
-    // 跳转个人信息页面
-	const goToProfile = () => {
-	  // 显示加载提示
-	  uni.showLoading({
-	    title: '加载中',
-	    mask: true
-	  });
-	  
-	  setTimeout(() => {
-	    uni.navigateTo({
-	      url: '/pages/personnalMsg/personnalMsg',
-	      success: () => uni.hideLoading(),
-	      fail: (err) => {
-	        uni.hideLoading();
-	        console.error('跳转失败:', err);
-	        uni.showToast({
-	          title: '页面加载超时',
-	          icon: 'none'
-	        });
-	      }
-	    });
-	  }, 50); // 短暂延迟确保加载提示显示
-	};
-
-    // 返回模板所需的数据和方法（类型自动推导）
-    return {
-      userInfo,
-      messageList,
-      handleItemTap,
-      cancelUnread,
-      deleteMessage,
-      goToProfile
-    };
-  }
+// 响应式数据
+const userInfo = reactive<UserInfo>({
+  avatarUrl: '/static/default-avatar.png', 
+  nickname: '用户姓名' 
 });
+
+const messageList = reactive<MessageItem[]>([
+  { id: 1, title: '系统通知', content: '新系统通知...', unread: true },
+  { id: 2, title: '互动消息', content: '收到点赞', unread: false },
+  { id: 3, title: '测试消息', content: '未读测试', unread: true }
+]);
+
+// 方法逻辑
+const handleItemTap = (item: MessageItem) => {
+  console.log('点击消息:', item);
+  // 可扩展：跳转到消息详情页
+};
+
+const cancelUnread = (index: number) => {
+  messageList[index].unread = false;
+};
+
+const deleteMessage = (index: number) => {
+  messageList.splice(index, 1);
+};
+
+const goToProfile = async () => {
+  try {
+    await navigateToWithLoading('/pages/personnalMsg/personnalMsg', {
+      loadingText: '加载中...',
+      onError: (err) => {
+        console.warn('跳转异常:', err);
+      }
+    });
+  } catch (err) {
+    // 统一错误捕获
+  }
+};
 </script>
 
 <style scoped>
@@ -160,7 +117,7 @@ export default defineComponent({
 .profile-section {
   position: relative;
   width: 100%;
-  height: 20vh;
+  height: 30vh;
   background: linear-gradient(to bottom , #87CEEB, #F0FFF0);
   display: flex;
   flex-direction: row;

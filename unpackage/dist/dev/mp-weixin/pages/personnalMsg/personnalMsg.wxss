@@ -5,12 +5,42 @@
   font-size: 16px;
 }
 
-/* 顶部背景 */
+/* 顶部背景区域统一样式 */
 .profile-header.data-v-fbcda4e7 {
   height: 200rpx;
-  background: linear-gradient(to right, #42b983, #64d3a6);
+  /* 修改为你想要的垂直渐变背景 */
+  background: linear-gradient(to bottom, #87CEEB, #F5F5F5); 
   position: relative;
   transition: height 0.3s ease;
+  padding-top: 40rpx; /* 预留状态栏高度，避免按钮被遮挡 */
+}
+
+/* 新增：返回按钮样式 */
+.back-button.data-v-fbcda4e7 {
+  position: absolute;
+  left: 20rpx; /* 左侧边距 */
+  top: 40rpx; /* 与 padding-top 一致，垂直居中 */
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2); /* 半透明白色背景 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10; /* 确保在头像上方显示 */
+  transition: background-color 0.2s;
+}
+
+/* 按钮点击反馈 */
+.back-button.data-v-fbcda4e7:active {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* 返回图标样式 */
+.back-icon.data-v-fbcda4e7 {
+  color: #fff; /* 白色图标，与背景对比 */
+  font-size: 36rpx;
+  font-weight: bold;
 }
 
 /* 头像容器 */

@@ -15,6 +15,18 @@ const _sfc_main = {
       contact: "138****6789"
     });
     const infoItems = common_vendor.ref([]);
+    const navigateBack = () => {
+      const pages = getCurrentPages();
+      if (pages.length > 1) {
+        common_vendor.index.navigateBack({
+          delta: 1
+        });
+      } else {
+        common_vendor.index.redirectTo({
+          url: "/pages/my/my"
+        });
+      }
+    };
     common_vendor.onMounted(() => {
       setTimeout(() => {
         infoItems.value = [
@@ -27,13 +39,14 @@ const _sfc_main = {
           { label: "学号", value: userInfo.studentId },
           { label: "联系方式", value: userInfo.contact }
         ];
-        common_vendor.index.__f__("log", "at pages/personnalMsg/personnalMsg.vue:65", "个人信息页面初始化完成");
+        common_vendor.index.__f__("log", "at pages/personnalMsg/personnalMsg.vue:84", "个人信息页面初始化完成");
       }, 0);
     });
     return (_ctx, _cache) => {
       return {
-        a: userInfo.avatar,
-        b: common_vendor.f(infoItems.value, (item, index, i0) => {
+        a: common_vendor.o(navigateBack),
+        b: userInfo.avatar,
+        c: common_vendor.f(infoItems.value, (item, index, i0) => {
           return {
             a: common_vendor.t(item.label),
             b: common_vendor.t(item.value),
