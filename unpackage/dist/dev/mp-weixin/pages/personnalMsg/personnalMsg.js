@@ -18,13 +18,9 @@ const _sfc_main = {
     const navigateBack = () => {
       const pages = getCurrentPages();
       if (pages.length > 1) {
-        common_vendor.index.navigateBack({
-          delta: 1
-        });
+        common_vendor.index.navigateBack({ delta: 1 });
       } else {
-        common_vendor.index.redirectTo({
-          url: "/pages/my/my"
-        });
+        common_vendor.index.redirectTo({ url: "/pages/my/my" });
       }
     };
     common_vendor.onMounted(() => {
@@ -39,7 +35,7 @@ const _sfc_main = {
           { label: "学号", value: userInfo.studentId },
           { label: "联系方式", value: userInfo.contact }
         ];
-        common_vendor.index.__f__("log", "at pages/personnalMsg/personnalMsg.vue:84", "个人信息页面初始化完成");
+        common_vendor.index.__f__("log", "at pages/personnalMsg/personnalMsg.vue:71", "个人信息页面初始化完成");
       }, 0);
     });
     return (_ctx, _cache) => {
