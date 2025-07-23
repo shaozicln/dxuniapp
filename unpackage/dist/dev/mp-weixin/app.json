@@ -3,13 +3,14 @@
     "pages/index/index",
     "pages/my/my",
     "pages/personnalMsg/personnalMsg",
-    "pages/questionnaire/questionnaire"
+    "pages/questionnaire/questionnaire",
+    "pages/questionnaire/questionnaire-detail"
   ],
   "window": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "uni-app",
-    "navigationBarBackgroundColor": "#4a90aa",
-    "backgroundColor": "#F8F8F8"
+    "backgroundColor": "#F8F8F8",
+    "navigationStyle": "custom"
   },
   "tabBar": {
     "selectedColor": "#4a90aa",

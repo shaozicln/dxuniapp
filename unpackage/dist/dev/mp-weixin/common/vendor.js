@@ -85,9 +85,29 @@ const def = (obj, key, value) => {
   });
 };
 const looseToNumber = (val) => {
-  const n = parseFloat(val);
-  return isNaN(n) ? val : n;
+  const n2 = parseFloat(val);
+  return isNaN(n2) ? val : n2;
 };
+function normalizeClass(value) {
+  let res = "";
+  if (isString(value)) {
+    res = value;
+  } else if (isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      const normalized = normalizeClass(value[i]);
+      if (normalized) {
+        res += normalized + " ";
+      }
+    }
+  } else if (isObject(value)) {
+    for (const name in value) {
+      if (value[name]) {
+        res += name + " ";
+      }
+    }
+  }
+  return res.trim();
+}
 const toDisplayString = (val) => {
   return isString(val) ? val : val == null ? "" : isArray(val) || isObject(val) && (val.toString === objectToString || !isFunction(val.toString)) ? JSON.stringify(val, replacer, 2) : String(val);
 };
@@ -5106,6 +5126,7 @@ function vFor(source, renderItem) {
 const o = (value, key) => vOn(value, key);
 const f = (source, renderItem) => vFor(source, renderItem);
 const e = (target, ...sources) => extend(target, ...sources);
+const n = (value) => normalizeClass(value);
 const t = (val) => toDisplayString(val);
 function createApp$1(rootComponent, rootProps = null) {
   rootComponent && (rootComponent.mpType = "app");
@@ -5697,8 +5718,8 @@ const $once = defineSyncApi(API_ONCE, (name, callback) => {
 const $off = defineSyncApi(API_OFF, (name, callback) => {
   if (!isArray(name))
     name = name ? [name] : [];
-  name.forEach((n) => {
-    eventBus.off(n, callback);
+  name.forEach((n2) => {
+    eventBus.off(n2, callback);
   });
 }, OffProtocol);
 const $emit = defineSyncApi(API_EMIT, (name, ...args) => {
@@ -6926,9 +6947,9 @@ function isConsoleWritable() {
   return isWritable;
 }
 function initRuntimeSocketService() {
-  const hosts = "26.96.20.158,10.5.10.66,127.0.0.1";
+  const hosts = "26.96.20.158,192.168.5.14,127.0.0.1";
   const port = "8090";
-  const id = "mp-weixin_DXPh11";
+  const id = "mp-weixin_ENBneR";
   const lazy = typeof swan !== "undefined";
   let restoreError = lazy ? () => {
   } : initOnError();
@@ -7874,14 +7895,25 @@ const createSubpackageApp = initCreateSubpackageApp();
   wx.createPluginApp = global.createPluginApp = createPluginApp;
   wx.createSubpackageApp = global.createSubpackageApp = createSubpackageApp;
 }
+const createLifeCycleHook = (lifecycle, flag = 0) => (hook, target = getCurrentInstance()) => {
+  !isInSSRComponentSetup && injectHook(lifecycle, hook, target);
+};
+const onShow = /* @__PURE__ */ createLifeCycleHook(
+  ON_SHOW,
+  1 | 2
+  /* HookFlags.PAGE */
+);
 exports._export_sfc = _export_sfc;
+exports.computed = computed;
 exports.createSSRApp = createSSRApp;
 exports.defineComponent = defineComponent;
 exports.e = e;
 exports.f = f;
 exports.index = index;
+exports.n = n;
 exports.o = o;
 exports.onMounted = onMounted;
+exports.onShow = onShow;
 exports.reactive = reactive;
 exports.ref = ref;
 exports.t = t;
