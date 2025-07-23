@@ -1,10 +1,10 @@
 <template>
   <view class="my-container">
     <!-- 个人信息区域，绑定点击跳转事件 -->
-    <view class="profile-section" @tap="goToProfile"> 
+    <view class="profile-section" @tap="goToProfile">
       <image 
-        class="avatar" 
-        :src="userInfo.avatarUrl" 
+        class="avatar"
+        :src="userInfo.avatarUrl"
         mode="aspectFill"
       ></image>
       <view class="user-info-wrapper">
@@ -14,7 +14,6 @@
         </view>
       </view>
     </view>
-
     <!-- 消息列表区域 -->
     <view class="message-section">
       <view class="section-title">消息列表</view>

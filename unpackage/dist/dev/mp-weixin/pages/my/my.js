@@ -28,7 +28,7 @@ const _sfc_main = common_vendor.defineComponent({
       }
     ]);
     const handleItemTap = (item) => {
-      common_vendor.index.__f__("log", "at pages/my/my.vue:101", "点击了消息：", item);
+      common_vendor.index.__f__("log", "at pages/my/my.vue:100", "点击了消息：", item);
     };
     const cancelUnread = (index) => {
       messageList[index].unread = false;
@@ -47,7 +47,7 @@ const _sfc_main = common_vendor.defineComponent({
           success: () => common_vendor.index.hideLoading(),
           fail: (err) => {
             common_vendor.index.hideLoading();
-            common_vendor.index.__f__("error", "at pages/my/my.vue:128", "跳转失败:", err);
+            common_vendor.index.__f__("error", "at pages/my/my.vue:127", "跳转失败:", err);
             common_vendor.index.showToast({
               title: "页面加载超时",
               icon: "none"
