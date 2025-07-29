@@ -83,6 +83,42 @@ const _sfc_main = {
               }
             ],
             answer: [1009, 1012]
+          },
+          {
+            id: 104,
+            text: "请对课程质量进行评分",
+            type: "slider",
+            min: 0,
+            max: 10,
+            step: 1,
+            options: [
+              {
+                id: 4001,
+                text: "极差",
+                value: 0
+              },
+              {
+                id: 4002,
+                text: "较差",
+                value: 2
+              },
+              {
+                id: 4003,
+                text: "一般",
+                value: 5
+              },
+              {
+                id: 4004,
+                text: "良好",
+                value: 8
+              },
+              {
+                id: 4005,
+                text: "优秀",
+                value: 10
+              }
+            ],
+            answer: 0
           }
         ]
       },
