@@ -4,7 +4,8 @@
     "pages/my/my",
     "pages/personnalMsg/personnalMsg",
     "pages/questionnaire/questionnaire",
-    "pages/questionnaire/questionnaire-detail"
+    "pages/questionnaire/questionnaireDetail",
+    "pages/questionnaire/checkCourseQnr"
   ],
   "window": {
     "navigationBarTextStyle": "black",

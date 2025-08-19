@@ -1,7 +1,7 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
 const _sfc_main = {
-  __name: "questionnaire-detail",
+  __name: "questionnaireDetail",
   setup(__props) {
     const questionnaire = common_vendor.ref(null);
     common_vendor.onMounted(() => {
@@ -25,7 +25,9 @@ const _sfc_main = {
       }
     });
     const handleBack = () => {
-      common_vendor.index.navigateBack({ delta: 1 });
+      common_vendor.index.navigateBack({
+        delta: 1
+      });
     };
     const isOptionSelected = (questionId, optionId) => {
       var _a;
@@ -55,36 +57,22 @@ const _sfc_main = {
         }
       }
     };
-    const isStarSelected = (questionId, index) => {
-      if (!questionnaire.value)
-        return false;
-      const question = questionnaire.value.questions.find((q) => q.id === questionId);
-      if (!question || question.answer === null)
-        return false;
-      const optionIndex = question.options.findIndex((opt) => opt.id === question.answer);
-      return index <= optionIndex;
+    const getStarScore = (star) => {
+      return star * 2;
     };
-    const selectStar = (questionId, optionId, index) => {
+    const selectStar = (questionId, star) => {
       if (!questionnaire.value)
         return;
       const question = questionnaire.value.questions.find((q) => q.id === questionId);
       if (question)
-        question.answer = optionId;
+        question.answer = star;
     };
     const getSliderPosition = (question) => {
-      if (question.answer === null)
-        question.answer = question.min || 0;
-      const value = question.answer;
-      const min = question.min || 0;
-      const max = question.max || 10;
+      const value = question.answer || 1;
+      const min = 1;
+      const max = 10;
       const percent = (value - min) / (max - min) * 100;
       return `${Math.max(0, Math.min(100, percent))}%`;
-    };
-    const getSliderText = (question) => {
-      if (question.answer === null)
-        question.answer = question.min || 0;
-      const matchedOption = question.options.find((opt) => opt.value === question.answer);
-      return (matchedOption == null ? void 0 : matchedOption.text) || question.answer;
     };
     const handleSliderChanging = (questionId, e) => {
       if (!questionnaire.value)
@@ -104,32 +92,43 @@ const _sfc_main = {
       if (!questionnaire.value)
         return;
       const allAnswered = questionnaire.value.questions.every((question) => {
-        if (question.type === "slider") {
-          return question.answer !== null;
-        } else if (question.type === "single" || question.type === "rating") {
-          return question.answer !== null;
-        } else if (question.type === "multiple") {
-          return question.answer && question.answer.length > 0;
-        }
-        return true;
+        return question.answer !== null && question.answer !== void 0;
       });
       if (!allAnswered) {
-        common_vendor.index.showToast({ title: "请完成所有问题", icon: "none" });
+        common_vendor.index.showToast({
+          title: "请完成所有问题",
+          icon: "none"
+        });
         return;
       }
-      common_vendor.index.showLoading({ title: "提交中..." });
-      questionnaire.value.status = "completed";
+      const formattedQuestionnaire = JSON.parse(JSON.stringify(questionnaire.value));
+      formattedQuestionnaire.questions.forEach((question) => {
+        if (question.type === "rating") {
+          question.actualScore = question.answer * 2;
+        } else if (question.type === "slider") {
+          question.actualScore = question.answer;
+        }
+      });
+      common_vendor.index.showLoading({
+        title: "提交中..."
+      });
+      formattedQuestionnaire.status = "completed";
       const allQuestionnaires = JSON.parse(common_vendor.index.getStorageSync("questionnaires") || "[]");
-      const index = allQuestionnaires.findIndex((q) => q.id === questionnaire.value.id);
+      const index = allQuestionnaires.findIndex((q) => q.id === formattedQuestionnaire.id);
       if (index !== -1) {
-        allQuestionnaires[index] = JSON.parse(JSON.stringify(questionnaire.value));
+        allQuestionnaires[index] = formattedQuestionnaire;
       } else {
-        allQuestionnaires.push(JSON.parse(JSON.stringify(questionnaire.value)));
+        allQuestionnaires.push(formattedQuestionnaire);
       }
       common_vendor.index.setStorageSync("questionnaires", JSON.stringify(allQuestionnaires));
       common_vendor.index.hideLoading();
-      common_vendor.index.showToast({ title: "提交成功", icon: "success" });
-      setTimeout(() => common_vendor.index.navigateBack({ delta: 1 }), 800);
+      common_vendor.index.showToast({
+        title: "提交成功",
+        icon: "success"
+      });
+      setTimeout(() => common_vendor.index.navigateBack({
+        delta: 1
+      }), 800);
     };
     const resetQuestionnaire = () => {
       common_vendor.index.showModal({
@@ -150,7 +149,10 @@ const _sfc_main = {
               allQuestionnaires[index] = JSON.parse(JSON.stringify(questionnaire.value));
               common_vendor.index.setStorageSync("questionnaires", JSON.stringify(allQuestionnaires));
             }
-            common_vendor.index.showToast({ title: "已重置，可重新填写", icon: "none" });
+            common_vendor.index.showToast({
+              title: "已重置，可重新填写",
+              icon: "none"
+            });
           }
         }
       });
@@ -165,7 +167,6 @@ const _sfc_main = {
         d: questionnaire.value
       }, questionnaire.value ? {
         e: common_vendor.f(questionnaire.value.questions, (question, qIndex, i0) => {
-          var _a, _b;
           return common_vendor.e({
             a: common_vendor.t(qIndex + 1),
             b: common_vendor.t(question.text),
@@ -197,29 +198,24 @@ const _sfc_main = {
           } : {}, {
             g: question.type === "rating"
           }, question.type === "rating" ? {
-            h: common_vendor.f(question.options, (option, oIndex, i1) => {
+            h: common_vendor.f(5, (star, k1, i1) => {
               return {
-                a: common_vendor.t(option.text),
-                b: oIndex,
-                c: isStarSelected(question.id, oIndex) ? 1 : "",
-                d: common_vendor.o(($event) => selectStar(question.id, option.id), oIndex)
+                a: common_vendor.t(getStarScore(star)),
+                b: star,
+                c: question.answer !== null && star <= question.answer ? 1 : "",
+                d: common_vendor.o(($event) => selectStar(question.id, star), star)
               };
             })
           } : {}, {
             i: question.type === "slider"
           }, question.type === "slider" ? {
-            j: common_vendor.t(getSliderText(question)),
+            j: common_vendor.t(question.answer),
             k: getSliderPosition(question),
-            l: question.min || 0,
-            m: question.max || 10,
-            n: question.step || 1,
-            o: question.answer !== null ? question.answer : question.min || 0,
-            p: common_vendor.o(($event) => handleSliderChanging(question.id, $event), qIndex),
-            q: common_vendor.o(($event) => handleSliderChange(question.id, $event), qIndex),
-            r: common_vendor.t(((_a = question.options[0]) == null ? void 0 : _a.text) || "最低"),
-            s: common_vendor.t(((_b = question.options[question.options.length - 1]) == null ? void 0 : _b.text) || "最高")
+            l: question.answer || 1,
+            m: common_vendor.o(($event) => handleSliderChanging(question.id, $event), qIndex),
+            n: common_vendor.o(($event) => handleSliderChange(question.id, $event), qIndex)
           } : {}, {
-            t: qIndex
+            o: qIndex
           });
         })
       } : {}, {
@@ -236,6 +232,6 @@ const _sfc_main = {
     };
   }
 };
-const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["__scopeId", "data-v-55b47ae9"]]);
+const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["__scopeId", "data-v-c8f6d6a9"]]);
 wx.createPage(MiniProgramPage);
-//# sourceMappingURL=../../../.sourcemap/mp-weixin/pages/questionnaire/questionnaire-detail.js.map
+//# sourceMappingURL=../../../.sourcemap/mp-weixin/pages/questionnaire/questionnaireDetail.js.map
