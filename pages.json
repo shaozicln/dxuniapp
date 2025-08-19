@@ -25,9 +25,16 @@
 			}
 		},
 		{
-			"path": "pages/questionnaire/questionnaire-detail",
+			"path": "pages/questionnaire/questionnaireDetail",
 			"style": {
 				"navigationBarTitleText":""
+			}
+		},
+		{
+			"path" : "pages/questionnaire/checkCourseQnr",
+			"style" : 
+			{
+				"navigationBarTitleText" : ""
 			}
 		}
 	],
