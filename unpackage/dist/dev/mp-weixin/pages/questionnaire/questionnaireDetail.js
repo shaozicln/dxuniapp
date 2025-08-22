@@ -1,9 +1,11 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
+const utils_request_request = require("../../utils/request/request.js");
 const _sfc_main = {
   __name: "questionnaireDetail",
   setup(__props) {
     const questionnaire = common_vendor.ref(null);
+    const submitting = common_vendor.ref(false);
     common_vendor.onMounted(() => {
       const pages = getCurrentPages();
       const currentPage = pages[pages.length - 1];
@@ -38,6 +40,55 @@ const _sfc_main = {
         return false;
       return question.type === "single" ? question.answer === optionId : (_a = question.answer) == null ? void 0 : _a.includes(optionId);
     };
+    const submitScore = async (questionId, scoreValue) => {
+      var _a;
+      if (submitting.value)
+        return;
+      try {
+        submitting.value = true;
+        const now = /* @__PURE__ */ new Date();
+        const scoreTime = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}-${now.getDate().toString().padStart(2, "0")} ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
+        const scoreData = {
+          scoreId: 1,
+          targetId: 1,
+          targetUserId: 1,
+          questionnaireId: questionnaire.value.id,
+          questionId,
+          scoreValue,
+          scoreLevel: scoreValue >= 8 ? "A" : scoreValue >= 6 ? "B" : scoreValue >= 4 ? "C" : "D",
+          isModified: 0,
+          scoreTime,
+          lastModifyTime: scoreTime
+        };
+        common_vendor.index.__f__("log", "at pages/questionnaire/questionnaireDetail.vue:183", "提交的数据:", scoreData);
+        const res = await utils_request_request.post("/question/score", scoreData);
+        common_vendor.index.__f__("log", "at pages/questionnaire/questionnaireDetail.vue:185", "接口返回结果:", res);
+        if (res.code === 200) {
+          common_vendor.index.__f__("log", "at pages/questionnaire/questionnaireDetail.vue:188", `问题 ${questionId} 分数提交成功`, res.data);
+          const question = questionnaire.value.questions.find((q) => q.id === questionId);
+          if (question) {
+            if (question.scoreId) {
+              question.isModified = 1;
+            } else {
+              question.scoreId = (_a = res.data) == null ? void 0 : _a.scoreId;
+            }
+          }
+        } else {
+          common_vendor.index.showToast({
+            title: `提交失败: ${res.msg || "未知错误"}`,
+            icon: "none"
+          });
+        }
+      } catch (err) {
+        common_vendor.index.__f__("error", "at pages/questionnaire/questionnaireDetail.vue:205", "提交分数异常:", err);
+        common_vendor.index.showToast({
+          title: "网络错误，提交失败",
+          icon: "none"
+        });
+      } finally {
+        submitting.value = false;
+      }
+    };
     const selectOption = (questionId, optionId) => {
       if (!questionnaire.value)
         return;
@@ -46,6 +97,10 @@ const _sfc_main = {
         return;
       if (question.type === "single") {
         question.answer = optionId;
+        const selectedOption = question.options.find((opt) => opt.id === optionId);
+        if (selectedOption) {
+          submitScore(questionId, selectedOption.value || 0);
+        }
       } else if (question.type === "multiple") {
         if (!question.answer)
           question.answer = [];
@@ -55,6 +110,9 @@ const _sfc_main = {
         } else {
           question.answer.push(optionId);
         }
+        const selectedOptions = question.options.filter((opt) => question.answer.includes(opt.id));
+        const score = selectedOptions.length ? Math.round(selectedOptions.reduce((sum, opt) => sum + (opt.value || 0), 0) / selectedOptions.length) : 0;
+        submitScore(questionId, score);
       }
     };
     const getStarScore = (star) => {
@@ -64,8 +122,11 @@ const _sfc_main = {
       if (!questionnaire.value)
         return;
       const question = questionnaire.value.questions.find((q) => q.id === questionId);
-      if (question)
+      if (question) {
         question.answer = star;
+        const score = Math.round(star / 5 * 100);
+        submitScore(questionId, score);
+      }
     };
     const getSliderPosition = (question) => {
       const value = question.answer || 1;
@@ -85,11 +146,14 @@ const _sfc_main = {
       if (!questionnaire.value)
         return;
       const question = questionnaire.value.questions.find((q) => q.id === questionId);
-      if (question)
+      if (question) {
         question.answer = e.detail.value;
+        const score = Math.round(e.detail.value / 10 * 100);
+        submitScore(questionId, score);
+      }
     };
-    const submitQuestionnaire = () => {
-      if (!questionnaire.value)
+    const submitQuestionnaire = async () => {
+      if (!questionnaire.value || submitting.value)
         return;
       const allAnswered = questionnaire.value.questions.every((question) => {
         return question.answer !== null && question.answer !== void 0;
@@ -101,34 +165,33 @@ const _sfc_main = {
         });
         return;
       }
-      const formattedQuestionnaire = JSON.parse(JSON.stringify(questionnaire.value));
-      formattedQuestionnaire.questions.forEach((question) => {
-        if (question.type === "rating") {
-          question.actualScore = question.answer * 2;
-        } else if (question.type === "slider") {
-          question.actualScore = question.answer;
+      try {
+        submitting.value = true;
+        questionnaire.value.status = "completed";
+        const allQuestionnaires = JSON.parse(common_vendor.index.getStorageSync("questionnaires") || "[]");
+        const index = allQuestionnaires.findIndex((q) => q.id === questionnaire.value.id);
+        if (index !== -1) {
+          allQuestionnaires[index] = questionnaire.value;
+        } else {
+          allQuestionnaires.push(questionnaire.value);
         }
-      });
-      common_vendor.index.showLoading({
-        title: "提交中..."
-      });
-      formattedQuestionnaire.status = "completed";
-      const allQuestionnaires = JSON.parse(common_vendor.index.getStorageSync("questionnaires") || "[]");
-      const index = allQuestionnaires.findIndex((q) => q.id === formattedQuestionnaire.id);
-      if (index !== -1) {
-        allQuestionnaires[index] = formattedQuestionnaire;
-      } else {
-        allQuestionnaires.push(formattedQuestionnaire);
+        common_vendor.index.setStorageSync("questionnaires", JSON.stringify(allQuestionnaires));
+        common_vendor.index.showToast({
+          title: "所有评分已提交",
+          icon: "success"
+        });
+        setTimeout(() => common_vendor.index.navigateBack({
+          delta: 1
+        }), 800);
+      } catch (err) {
+        common_vendor.index.__f__("error", "at pages/questionnaire/questionnaireDetail.vue:337", "提交问卷异常:", err);
+        common_vendor.index.showToast({
+          title: "提交失败，请重试",
+          icon: "none"
+        });
+      } finally {
+        submitting.value = false;
       }
-      common_vendor.index.setStorageSync("questionnaires", JSON.stringify(allQuestionnaires));
-      common_vendor.index.hideLoading();
-      common_vendor.index.showToast({
-        title: "提交成功",
-        icon: "success"
-      });
-      setTimeout(() => common_vendor.index.navigateBack({
-        delta: 1
-      }), 800);
     };
     const resetQuestionnaire = () => {
       common_vendor.index.showModal({
@@ -227,7 +290,9 @@ const _sfc_main = {
       } : {}, {
         i: questionnaire.value.status !== "completed"
       }, questionnaire.value.status !== "completed" ? {
-        j: common_vendor.o(submitQuestionnaire)
+        j: common_vendor.t(submitting.value ? "提交中..." : "提交问卷"),
+        k: common_vendor.o(submitQuestionnaire),
+        l: submitting.value
       } : {}) : {});
     };
   }

@@ -1,4 +1,5 @@
 
+	/* 样式保持不变 */
 .questionnaire-detail-page.data-v-c8f6d6a9 {
 		background-color: #f5f5f5;
 		min-height: 100vh;
@@ -180,21 +181,17 @@
 		white-space: nowrap;
 }
 
-	/* 滑动条样式（重点修复） */
+	/* 滑动条样式 */
 .options-slider.data-v-c8f6d6a9 {
 		padding: 40rpx 20rpx 20rpx;
-		/* 增加左右内边距 */
 		position: relative;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		/* 整体居中 */
 }
 .slider-container.data-v-c8f6d6a9 {
 		width: 100%;
-		/* 保持满宽 */
 		max-width: 600rpx;
-		/* 限制最大宽度 */
 		padding: 0 10rpx;
 		position: relative;
 		height: 80rpx;
@@ -225,7 +222,6 @@
 		border-top: 10rpx solid #42b983;
 		margin: 0 auto;
 }
-
 
 	/* 滑块样式优化 */
 slider.data-v-c8f6d6a9 {
@@ -271,6 +267,10 @@ slider.data-v-c8f6d6a9 {
 		text-align: center;
 		font-size: 30rpx;
 		box-shadow: 0 4rpx 10rpx rgba(66, 185, 131, 0.3);
+}
+.submit-btn.data-v-c8f6d6a9:disabled {
+		background-color: #a0d9b9;
+		cursor: not-allowed;
 }
 .reset-btn.data-v-c8f6d6a9 {
 		width: 600rpx;
