@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "",
+  "usingComponents": {
+    "check-course-qnr": "./checkCourseQnr"
+  }
+}

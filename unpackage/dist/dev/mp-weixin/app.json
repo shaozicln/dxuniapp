@@ -1,0 +1,34 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/my/my",
+    "pages/personnalMsg/personnalMsg",
+    "pages/questionnaire/questionnaire",
+    "pages/questionnaire/questionnaireDetail",
+    "pages/questionnaire/checkCourseQnr"
+  ],
+  "window": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "uni-app",
+    "backgroundColor": "#F8F8F8",
+    "navigationStyle": "custom"
+  },
+  "tabBar": {
+    "selectedColor": "#4a90aa",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "/static/tab/indexDefault.png",
+        "selectedIconPath": "/static/tab/indexSelected.png"
+      },
+      {
+        "pagePath": "pages/my/my",
+        "text": "我的",
+        "iconPath": "/static/tab/userDefault.png",
+        "selectedIconPath": "/static/tab/userSelected.png"
+      }
+    ]
+  },
+  "usingComponents": {}
+}
