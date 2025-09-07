@@ -1,1 +1,0 @@
-{"version":3,"file":"personal_msg.js","sources":["../../HBuilderX/plugins/uniapp-cli-vite/uniPage:/cGFnZXMvbXkvcGVyc29uYWxfbXNnLnZ1ZQ"],"sourcesContent":["import MiniProgramPage from 'D:/小程序/HBuilderX.4.75.2025071105/dx-project/dxuniapp/pages/my/personal_msg.vue'\nwx.createPage(MiniProgramPage)"],"names":[],"mappings":";;;;;;;;;;;;;;AACA,GAAG,WAAW,eAAe;"}

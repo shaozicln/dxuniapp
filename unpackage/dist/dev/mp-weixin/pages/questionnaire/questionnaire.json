@@ -1,4 +1,7 @@
 {
-  "navigationBarTitleText": "",
-  "usingComponents": {}
+  "navigationBarTitleText": "问卷列表",
+  "navigationBarTextStyle": "black",
+  "usingComponents": {
+    "check-course-qnr": "./checkCourseQnr"
+  }
 }

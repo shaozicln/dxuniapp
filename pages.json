@@ -1,58 +1,75 @@
 {
-	"pages": [
-		{
-			"path": "pages/index/index",
-			"style": {
-				"navigationBarTitleText": "首页"
-			}
-		},
-		{
-			"path": "pages/my/my",
-			"style": {
-				"navigationBarTitleText": "我的"
-			}
-		},
-		{
-			"path": "pages/personnalMsg/personnalMsg",
-			"style": {
-				"navigationBarTitleText":""
-			}
-		},
-		{
-			"path": "pages/questionnaire/questionnaire",
-			"style": {
-				"navigationBarTitleText":""
-			}
-		},
-		{
-			"path": "pages/questionnaire/questionnaire-detail",
-			"style": {
-				"navigationBarTitleText":""
-			}
-		}
-	],
-	"globalStyle": {  // 取消注释并添加配置
-		"navigationBarTextStyle": "black",
-		"navigationBarTitleText": "uni-app",
-		"backgroundColor": "#F8F8F8",
-		"navigationStyle": "custom"  // 全局隐藏顶部导航栏
-	},
-	"tabBar": {
-		"selectedColor": "#4a90aa",
-		"list": [
-			{
-				"pagePath": "pages/index/index",
-				"text": "首页",
-				"iconPath": "/static/tab/indexDefault.png",
-				"selectedIconPath": "/static/tab/indexSelected.png"
-			},
-			{
-				"pagePath": "pages/my/my",
-				"text": "我的",
-				"iconPath": "/static/tab/userDefault.png",
-				"selectedIconPath": "/static/tab/userSelected.png"
-			}
-		]
-	},
-	"uniIdRouter": {}
+  "pages": [
+    {
+      "path": "pages/login/login", 
+      "style": {
+        "navigationBarTitleText": "登录",
+        "navigationStyle": "custom"  // 登录页单独启用默认导航栏（覆盖全局custom）
+      }
+    },
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "首页"
+      }
+    },
+    {
+      "path": "pages/my/my",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
+    },
+    {
+      "path": "pages/personalMsg/personalMsg",
+      "style": {
+        "navigationBarTitleText": "个人信息", 
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/questionnaire/questionnaire",
+      "style": {
+        "navigationBarTitleText": "问卷列表", 
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/questionnaire/questionnaireDetail",
+      "style": {
+        "navigationBarTitleText": "问卷详情",  
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/questionnaire/checkCourseQnr",
+      "style": {
+        "navigationBarTitleText": "课程问卷查看",
+        "navigationBarTextStyle": "black"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "uni-app",
+    "backgroundColor": "#ffffff",
+    "navigationStyle": "custom"  // 全局隐藏默认导航栏（适用于自定义导航的页面）
+  },
+  "tabBar": {
+    "selectedColor": "#4a90aa",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "/static/tab/indexDefault.png",
+        "selectedIconPath": "/static/tab/indexSelected.png"
+      },
+      {
+        "pagePath": "pages/my/my",
+        "text": "我的",
+        "iconPath": "/static/tab/userDefault.png",
+        "selectedIconPath": "/static/tab/userSelected.png"
+      }
+    ]
+  },
+  "uniIdRouter": {}
 }

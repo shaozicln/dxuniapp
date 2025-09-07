@@ -1,6 +1,6 @@
 <template>
   <view class="content">
-    <image class="logo" src="/static/schoolLogo.png"></image>
+    <image class="logo" src="@/static/schoolLogo.png"></image>
     <view class="text-area">
       <text class="title">{{title}}</text>
     </view>
@@ -8,7 +8,7 @@
     <!-- 按钮区域 -->
     <view class="button-container">
       <view class="questionnaire-btn" @click="navigateToQuestionnaire">
-        <image class="questionnaire-icon" src="/static/questionnaire.png"></image>
+        <image class="questionnaire-icon" src="@/static/questionnaire.png"></image>
         <text class="questionnaire-text">问卷</text>
       </view>
     </view>

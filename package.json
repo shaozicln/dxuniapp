@@ -1,0 +1,27 @@
+{
+  "name": "dxuniapp",
+  "version": "1.0.0",
+  "description": "uni-app project",
+  "main": "main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@dcloudio/uni-app": "^3.0.0-4070620250821001",
+    "axios": "^1.11.0",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "vue": "^3.3.0"
+  },
+  "devDependencies": {
+    "@dcloudio/uni-cli-i18n": "^2.0.2-4070620250821001",
+    "@dcloudio/uni-cli-shared": "^3.0.0-4070620250821001",
+    "@dcloudio/uni-mp-weixin": "^3.0.0-4070620250821001",
+    "@vitejs/plugin-vue": "^1.10.2",
+    "vite": "^2.9.16"
+  }
+}

@@ -1,16 +1,16 @@
 <template>
   <view class="my-container">
-    <!-- 个人信息区域，绑定点击跳转事件 -->
     <view class="profile-section" @tap="goToProfile"> 
       <image 
         class="avatar" 
         :src="userInfo.avatarUrl" 
         mode="aspectFill"
+        lazy-load 
       ></image>
       <view class="user-info-wrapper">
         <view class="user-info">
-          <text class="nickname">{{ userInfo.nickname }}</text>
-          <text class="desc">用户身份</text>
+          <text class="nickname">{{ userInfo.name }}</text>
+          <text class="desc">用户当前身份为：{{ userRole }}</text>
         </view>
       </view>
     </view>
@@ -18,7 +18,8 @@
     <!-- 消息列表区域 -->
     <view class="message-section">
       <view class="section-title">消息列表</view>
-      <block v-for="(item, index) in messageList" :key="item.id"> 
+      <view v-if="messageList.length === 0" class="empty-tip">暂无消息</view>
+      <block v-else v-for="(item, index) in messageList" :key="item.id"> 
         <view 
           class="message-item" 
           :class="{ unread: item.unread }"
@@ -50,14 +51,14 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue';
-import { navigateToWithLoading } from '@/utils/navigate/navigate';
-import { showActionSheet } from 'uni-app';
 
-// 类型定义集中管理
+import { reactive, onMounted, ref } from 'vue';
+import { navigateToWithLoading } from '../../src/utils/navigate/navigate'; 
+
 interface UserInfo {
-  avatarUrl: string;
-  nickname: string;
+  avatarUrl?: string;
+  name: string;
+  teacherId?: string;
 }
 
 interface MessageItem {
@@ -69,41 +70,61 @@ interface MessageItem {
 
 // 响应式数据
 const userInfo = reactive<UserInfo>({
-  avatarUrl: '/static/default-avatar.png', 
-  nickname: '用户姓名' 
+  avatarUrl: '/static/default-avatar.png',
+  name: '未登录'
 });
-
-// 消息列表数据
+const userRole = ref<string>('未登录'); // 存储判断后的身份
 const messageList = reactive<MessageItem[]>([
   { id: 1, title: '系统通知', content: '新系统通知...', unread: true },
   { id: 2, title: '互动消息', content: '学生发来的未读消息', unread: true }, 
   { id: 3, title: '测试消息', content: '未读测试', unread: true }
 ]);
 
-// 点击消息逻辑
+onMounted(() => {
+  try {
+    const storedUserInfo = uni.getStorageSync('userInfo') as UserInfo;
+
+    if (storedUserInfo && storedUserInfo.name) {
+      userInfo.name = storedUserInfo.name;
+      if (storedUserInfo.avatarUrl) {
+        userInfo.avatarUrl = storedUserInfo.avatarUrl;
+      }
+
+      const teacherId = storedUserInfo.teacherId || '';
+      userRole.value = teacherId.startsWith('Z') ? '老师' : '学生';
+
+      console.log('读取本地用户信息成功，身份：', userRole.value);
+    } else {
+      console.warn('本地用户信息不完整');
+      userRole.value = '未登录';
+    }
+  } catch (err) {
+    console.error('读取用户信息失败:', err);
+    userRole.value = '身份未知';
+  }
+});
 const handleItemTap = (item: MessageItem) => {
   console.log('点击消息:', item);
-  // 可扩展：跳转到消息详情页，比如：
-  // navigateTo({ url: `/pages/messageDetail/messageDetail?id=${item.id}` });
+  if (item.unread) {
+    const index = messageList.findIndex(msg => msg.id === item.id);
+    if (index !== -1) messageList[index].unread = false;
+  }
 };
 
-// 取消标红逻辑
 const cancelUnread = (index: number) => {
   messageList[index].unread = false;
 };
 
-// 删除消息逻辑
 const deleteMessage = (index: number) => {
   messageList.splice(index, 1);
 };
 
-// 长按事件逻辑（未读标红消息禁止长按）
 const handleLongPress = (index: number) => {
   const currentItem = messageList[index];
   if (currentItem.unread) return; 
 
   uni.showActionSheet({
-    itemList: ['恢复标红', '删除', '取消'], // 清晰命名
+    itemList: ['恢复标红', '删除', '取消'],
     success: (res) => {
       if (res.tapIndex === 0) {
         currentItem.unread = true; 
@@ -117,23 +138,23 @@ const handleLongPress = (index: number) => {
   });
 };
 
-// 跳转个人信息页逻辑
 const goToProfile = async () => {
   try {
-    await navigateToWithLoading('/pages/personnalMsg/personnalMsg', {
+    await navigateToWithLoading('/pages/personalMsg/personalMsg', {
       loadingText: '加载中...',
       onError: (err) => {
         console.warn('跳转异常:', err);
+        uni.showToast({ title: '跳转失败', icon: 'none' }); 
       }
     });
   } catch (err) {
     console.error('跳转个人信息页失败:', err);
+    uni.showToast({ title: '跳转失败', icon: 'none' });
   }
 };
 </script>
-
 <style scoped>
-/* 页面基础容器 */
+
 .my-container {
   display: flex;
   flex-direction: column;
@@ -152,7 +173,7 @@ const goToProfile = async () => {
   align-items: center;
   padding: 0 40rpx;
   box-sizing: border-box;
-    margin-bottom: 0;
+  margin-bottom: 0;
 }
 
 /* 头像样式 */
@@ -162,6 +183,7 @@ const goToProfile = async () => {
   border-radius: 50%;
   border: 3rpx solid #c9edf5; 
   margin-right: 20rpx; 
+  object-fit: cover;
 }
 
 /* 用户信息包裹层 */
@@ -197,7 +219,7 @@ const goToProfile = async () => {
 /* 消息列表区域 */
 .message-section {
   flex: 1;
-  padding:  0 10rpx;
+  padding: 20rpx 10rpx;
   box-sizing: border-box;
 }
 
@@ -211,6 +233,14 @@ const goToProfile = async () => {
   padding-left: 10rpx;
 }
 
+/* 空列表提示 */
+.empty-tip {
+  font-size: 28rpx;
+  color: #999;
+  text-align: center;
+  padding: 50rpx 0;
+}
+
 /* 消息项容器 */
 .message-item {
   padding: 20rpx;
@@ -220,12 +250,14 @@ const goToProfile = async () => {
   transition: background-color 0.2s ease; 
   border: 1px solid #e6e6e6; 
   border-radius: 8rpx;
-  margin-bottom: 15rpx; /* 调整间距更舒适 */
+  margin-bottom: 15rpx;
+  background-color: #fff;
 }
 
 /* 未读消息背景样式 */
 .unread {
   background-color: #ffeaea; 
+  border-color: #ffcccc;
 }
 
 /* 消息标题样式 */
@@ -241,6 +273,11 @@ const goToProfile = async () => {
   font-size: 26rpx;
   color: #666; 
   line-height: 1.6; 
+
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* 操作按钮容器 */
@@ -256,7 +293,7 @@ const goToProfile = async () => {
   padding: 12rpx 24rpx; 
   border-radius: 8rpx;
   font-size: 24rpx; 
-  border: none; /* 去掉默认边框 */
+  border: none;
 }
 
 /* 取消标红按钮样式 */

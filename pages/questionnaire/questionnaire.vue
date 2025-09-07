@@ -1,6 +1,6 @@
-<template>
+·<template>
 	<view class="questionnaire-page">
-		<!-- 顶部背景区域 -->
+
 		<view class="page-header">
 			<!-- 返回按钮 -->
 			<view class="back-button" @click="handleBack">
@@ -19,8 +19,11 @@
 				@click="currentFilter = 'completed'">已完成</view>
 		</view>
 
+		<view v-if="isInitialState" class="initial-hint">
+			点击左下角左下角选择对应课程问卷
+		</view>
 		<!-- 问卷列表区域 -->
-		<view class="questionnaire-list">
+		<view v-else class="questionnaire-list">
 			<view class="questionnaire-item" v-for="(questionnaire, index) in filteredQuestionnaires" :key="index"
 				@click="navigateToDetail(questionnaire)">
 				<view class="questionnaire-header">
@@ -37,6 +40,21 @@
 				<view class="questionnaire-desc">{{ questionnaire.description }}</view>
 			</view>
 		</view>
+
+		<!-- 左下角悬浮按钮（三条杠图标） -->
+		<view class="float-button" @click="showCheckCourse = true">
+			<view class="bar"></view>
+			<view class="bar"></view>
+			<view class="bar"></view>
+		</view>
+
+		<!-- 弹窗容器（包含checkCourseOnr组件） -->
+		<view v-if="showCheckCourse" class="modal-overlay" @click="showCheckCourse = false">
+			<view class="modal-content" @click.stop>
+				<check-course-qnr @close="showCheckCourse = false" @selectCourse="handleSelectCourse" />
+			</view>
+		</view>
+
 	</view>
 </template>
 
@@ -51,307 +69,155 @@
 	import {
 		onShow
 	} from '@dcloudio/uni-app';
+	import checkCourseQnr from './checkCourseQnr.vue';
 
-	// 模拟后端返回的问卷数据
-	const questionnaires = reactive([{
-			id: 1,
-			title: '2025级新生入学调查问卷',
-			grade: '基础级',
-			description: '请新生填写个人基本信息和入学期望',
-			date: '2025-09-01',
-			status: 'completed',
-			questions: [{
-					id: 101,
-					text: '你的姓名是？',
-					type: 'single',
-					options: [{
-							id: 1001,
-							text: '张三'
-						},
-						{
-							id: 1002,
-							text: '李四'
-						},
-						{
-							id: 1003,
-							text: '王五'
-						},
-						{
-							id: 1004,
-							text: '其他'
-						}
-					],
-					answer: 1001
-				},
-				{
-					id: 102,
-					text: '你选择的专业是？',
-					type: 'single',
-					options: [{
-							id: 1005,
-							text: '计算机科学与技术'
-						},
-						{
-							id: 1006,
-							text: '软件工程'
-						},
-						{
-							id: 1007,
-							text: '物联网工程'
-						},
-						{
-							id: 1008,
-							text: '人工智能'
-						}
-					],
-					answer: 1006
-				},
-				{
-					id: 103,
-					text: '你对大学生活的期望是？',
-					type: 'multiple',
-					options: [{
-							id: 1009,
-							text: '学习专业知识'
-						},
-						{
-							id: 1010,
-							text: '参加社团活动'
-						},
-						{
-							id: 1011,
-							text: '锻炼身体'
-						},
-						{
-							id: 1012,
-							text: '结交朋友'
-						}
-					],
-					answer: [1009, 1012]
-				},
-				{
-					id: 104,
-					text: '请对课程质量进行评分',
-					type: 'slider',
-					min: 0,
-					max: 10,
-					step: 1,
-					options: [{
-							id: 4001,
-							text: '极差',
-							value: 0
-						},
-						{
-							id: 4002,
-							text: '较差',
-							value: 2
-						},
-						{
-							id: 4003,
-							text: '一般',
-							value: 5
-						},
-						{
-							id: 4004,
-							text: '良好',
-							value: 8
-						},
-						{
-							id: 4005,
-							text: '优秀',
-							value: 10
-						}
-					],
-					answer: 0
-				}
-			]
-		},
-		{
-			id: 2,
-			title: '课程满意度调查问卷',
-			grade: '进阶级',
-			description: '对本学期已完成课程的评价和建议',
-			date: '2023-12-15',
-			status: 'pending',
-			questions: [{
-					id: 201,
-					text: '你对《数据结构》课程的满意度如何？',
-					type: 'rating',
-					options: [{
-							id: 2001,
-							text: '非常满意'
-						},
-						{
-							id: 2002,
-							text: '满意'
-						},
-						{
-							id: 2003,
-							text: '一般'
-						},
-						{
-							id: 2004,
-							text: '不满意'
-						},
-						{
-							id: 2005,
-							text: '非常不满意'
-						}
-					],
-					answer: null
-				},
-				{
-					id: 202,
-					text: '你认为《数据结构》课程的教学方法是否有效？',
-					type: 'single',
-					options: [{
-							id: 2006,
-							text: '非常有效'
-						},
-						{
-							id: 2007,
-							text: '有效'
-						},
-						{
-							id: 2008,
-							text: '一般'
-						},
-						{
-							id: 2009,
-							text: '无效'
-						}
-					],
-					answer: null
-				},
-				{
-					id: 203,
-					text: '你希望在下学期的课程中增加哪些内容？',
-					type: 'multiple',
-					options: [{
-							id: 2010,
-							text: '更多实践项目'
-						},
-						{
-							id: 2011,
-							text: '案例分析'
-						},
-						{
-							id: 2012,
-							text: '小组讨论'
-						},
-						{
-							id: 2013,
-							text: '邀请行业专家讲座'
-						}
-					],
-					answer: null
-				}
-			]
-		},
-		{
-			id: 3,
-			title: '校园生活质量调查问卷',
-			grade: '高级',
-			description: '对校园设施、服务和活动的评价',
-			date: '2024-03-20',
-			status: 'pending',
-			questions: [{
-					id: 301,
-					text: '你对学校食堂的满意度如何？',
-					type: 'rating',
-					options: [{
-							id: 3001,
-							text: '非常满意'
-						},
-						{
-							id: 3002,
-							text: '满意'
-						},
-						{
-							id: 3003,
-							text: '一般'
-						},
-						{
-							id: 3004,
-							text: '不满意'
-						},
-						{
-							id: 3005,
-							text: '非常不满意'
-						}
-					],
-					answer: null
-				},
-				{
-					id: 302,
-					text: '你经常使用的校园设施有哪些？',
-					type: 'multiple',
-					options: [{
-							id: 3006,
-							text: '图书馆'
-						},
-						{
-							id: 3007,
-							text: '体育馆'
-						},
-						{
-							id: 3008,
-							text: '自习室'
-						},
-						{
-							id: 3009,
-							text: '实验室'
-						},
-						{
-							id: 3010,
-							text: '食堂'
-						}
-					],
-					answer: null
-				},
-				{
-					id: 303,
-					text: '你希望学校增加哪些类型的校园活动？',
-					type: 'multiple',
-					options: [{
-							id: 3011,
-							text: '学术讲座'
-						},
-						{
-							id: 3012,
-							text: '文化节'
-						},
-						{
-							id: 3013,
-							text: '体育比赛'
-						},
-						{
-							id: 3014,
-							text: '创新创业活动'
-						},
-						{
-							id: 3015,
-							text: '志愿者服务'
-						}
-					],
-					answer: null
-				}
-			]
-		}
-	]);
+	import {
+		get
+	} from '@/src/utils/request/request';
+
+	const questionnaires = ref([]);
+	// 初始状态控制变量
+	const isInitialState = ref(true);
+
 	// 抽离的加载数据方法（通用逻辑）
 	const loadQuestionnaires = () => {
 		const savedQuestionnaires = uni.getStorageSync('questionnaires');
 		if (savedQuestionnaires) {
 			const loadedData = JSON.parse(savedQuestionnaires);
 			// 清空原有数据并替换为最新数据（确保响应式更新）
-			questionnaires.splice(0, questionnaires.length);
+			questionnaires.value.splice(0, questionnaires.value.length);
 			loadedData.forEach(item => {
-				questionnaires.push(item);
+				questionnaires.value.push(item);
 			});
+			// 有数据则退出初始状态
+			isInitialState.value = loadedData.length === 0;
 		} else {
 			// 首次加载且无本地数据时，保存初始数据
 			uni.setStorageSync('questionnaires', JSON.stringify(questionnaires));
+		}
+	};
+
+	//通过课程信息获取问卷数据
+	const fetchCourseQuestionnaires = async (courseNo, classSerial) => {
+		try {
+			uni.showLoading({
+				title: '获取问卷中...'
+			});
+
+			const res = await get('/qnr/getCourseQnrCon', {
+				courseNo,
+				classSerial
+			});
+
+			uni.hideLoading();
+			if (res.code === 200) {
+				// 转换API返回数据格式
+				const formattedData = res.data.map(item => ({
+					id: item.questionnaireId,
+					title: item.questionnaireName,
+					grade: '课程问卷', // 可根据实际需求调整
+					description: `课程: ${item.courseName} 教师: ${item.teacherName}`,
+					date: new Date().toLocaleDateString(), // 使用当前日期或接口返回的日期
+					status: 'pending', // 默认为未完成状态
+					questions: item.questions.map(question => ({
+						id: question.id,
+						text: question.name,
+						type: mapQuestionType(question.scoringTypeId),
+						//options: getDefaultOptions(question.scoringTypeId),
+						// 为滑动条和星级设置范围属性
+						min: question.scoringTypeId === 3 ? 0 : (question
+							.scoringTypeId === 4 ? 1 : undefined),
+						max: question.scoringTypeId === 3 ? 5 : (question
+							.scoringTypeId === 4 ? 10 : undefined),
+						step: question.scoringTypeId === 4 ? 1 : undefined,
+						answer: null
+					}))
+				}));
+
+				// questionnaires.value = res.rows || [];
+				questionnaires.value = formattedData;
+				console.log(questionnaires.value);
+				// 保存到本地存储
+				uni.setStorageSync('questionnaires', JSON.stringify(formattedData));
+
+				// 获取数据后退出初始状态
+				isInitialState.value = false;
+			} else {
+				uni.showToast({
+					title: res.msg || '未找到相关问卷',
+					icon: 'none'
+				});
+			}
+		} catch (err) {
+			uni.hideLoading();
+			console.error('获取课程问卷失败:', err);
+			uni.showToast({
+				title: '获取问卷失败，请重试',
+				icon: 'none'
+			});
+		}
+	};
+	// 辅助函数：映射题型（根据实际业务调整）
+	const mapQuestionType = (typeId) => {
+		// 假设1:单选题, 2:多选题, 3:评分题, 4:滑动条
+		const typeMap = {
+			1: 'single',
+			2: 'multiple',
+			3: 'rating',
+			4: 'slider'
+		};
+		return typeMap[typeId] || 'single';
+	};
+
+	// 辅助函数：根据题型生成默认选项（根据实际业务调整）
+	const getDefaultOptions = (typeId) => {
+		switch (typeId) {
+			case 1: // 单选题
+				return [{
+						id: 1,
+						text: '选项1'
+					},
+					{
+						id: 2,
+						text: '选项2'
+					},
+					{
+						id: 3,
+						text: '选项3'
+					},
+					{
+						id: 4,
+						text: '选项4'
+					}
+				];
+			case 2: // 多选题
+				return [{
+						id: 1,
+						text: '选项A'
+					},
+					{
+						id: 2,
+						text: '选项B'
+					},
+					{
+						id: 3,
+						text: '选项C'
+					},
+					{
+						id: 4,
+						text: '选项D'
+					}
+				];
+			case 3: // 打星题
+				return {
+					min: 0, max: 5
+				};
+			case 4: // 滑动条
+				return {
+					min: 1, max: 10, step: 1
+				};
+			default:
+				return [];
 		}
 	};
 
@@ -360,7 +226,6 @@
 		loadQuestionnaires();
 	});
 
-	// 正确使用小程序的 onShow 钩子（从 @dcloudio/uni-app 导入）
 	onShow(() => {
 		loadQuestionnaires(); // 从详情页返回时重新加载数据
 	});
@@ -372,18 +237,18 @@
 	// 显示的问卷列表
 	const filteredQuestionnaires = computed(() => {
 		if (currentFilter.value === 'all') {
-			return questionnaires;
+			return questionnaires.value;
 		} else if (currentFilter.value === 'pending') {
-			return questionnaires.filter(q => q.status === 'pending');
+			return questionnaires.value.filter(q => q.status === 'pending');
 		} else {
-			return questionnaires.filter(q => q.status === 'completed');
+			return questionnaires.value.filter(q => q.status === 'completed');
 		}
 	});
 
 	// 跳转到问卷详情页（小程序路由）
 	const navigateToDetail = (questionnaire) => {
 		uni.navigateTo({
-			url: `/pages/questionnaire/questionnaire-detail?data=${encodeURIComponent(JSON.stringify(questionnaire))}`
+			url: `/pages/questionnaire/questionnaireDetail?data=${encodeURIComponent(JSON.stringify(questionnaire))}`
 		});
 	};
 
@@ -392,9 +257,31 @@
 			delta: 1 // 返回上一级页面
 		});
 	};
+
+	// 控制弹窗显示
+	const showCheckCourse = ref(false);
+
+	// 接收课程选择事件
+	const handleSelectCourse = (courseNo, classSerial) => {
+		showCheckCourse.value = false;
+		// 这里可以处理课程选择后的逻辑（如更新问卷数据）
+		fetchCourseQuestionnaires(courseNo, classSerial);
+		console.log('选中课程：', courseNo, classSerial);
+	};
 </script>
 
 <style scoped>
+	.initial-hint {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		font-size: 32rpx;
+		color: #999;
+		text-align: center;
+		padding: 0 30rpx;
+	}
+
 	.questionnaire-page {
 		background-color: #f5f5f5;
 		min-height: 100vh;
@@ -564,5 +451,53 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+
+	/* 悬浮按钮样式 */
+	.float-button {
+		position: fixed;
+		left: 30rpx;
+		bottom: 30rpx;
+		width: 80rpx;
+		height: 80rpx;
+		background-color: #42b983;
+		border-radius: 50%;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.2);
+		z-index: 999;
+	}
+
+	.bar {
+		width: 40rpx;
+		height: 6rpx;
+		background-color: white;
+		border-radius: 3rpx;
+		margin: 4rpx 0;
+	}
+
+	/* 弹窗遮罩层 */
+	.modal-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(0, 0, 0, 0.5);
+		z-index: 1000;
+		display: flex;
+		align-items: flex-end;
+	}
+
+	/* 弹窗内容（占屏幕下方70%） */
+	.modal-content {
+		width: 100%;
+		height: 85vh;
+		background-color: white;
+		border-top-left-radius: 30rpx;
+		border-top-right-radius: 30rpx;
+		overflow: hidden;
 	}
 </style>
