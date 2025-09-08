@@ -1,11 +1,12 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
-const src_utils_request_request = require("../../src/utils/request/request.js");
+const utils_request_request = require("../../utils/request/request.js");
 const _sfc_main = {
   __name: "questionnaireDetail",
   setup(__props) {
     const questionnaire = common_vendor.ref(null);
     const submitting = common_vendor.ref(false);
+    common_vendor.ref(JSON.parse(common_vendor.index.getStorageSync("currentCourse") || "{}"));
     common_vendor.onMounted(() => {
       const pages = getCurrentPages();
       const currentPage = pages[pages.length - 1];
@@ -17,8 +18,15 @@ const _sfc_main = {
         questionnaire.value = storedQuestionnaire || currentQuestionnaire;
         if (questionnaire.value) {
           questionnaire.value.questions.forEach((question) => {
-            if (question.type === "slider" && question.answer === null) {
-              question.answer = question.min || 0;
+            if (question.answer === null || question.answer === void 0) {
+              if (question.type === "slider") {
+                question.answer = question.min || 0;
+              } else if (question.type === "rating") {
+                question.answer = 0;
+              }
+            }
+            if (question.textAnswer === void 0) {
+              question.textAnswer = "";
             }
           });
         }
@@ -31,6 +39,27 @@ const _sfc_main = {
         delta: 1
       });
     };
+    const getQuestionTag = (question) => {
+      switch (question.scoringTypeId) {
+        case 1:
+          return "[单选题]";
+        case 2:
+          return "[多选题]";
+        case 3:
+          return "[打星题]";
+        case 4:
+          return "[滑动打分题]";
+        case 5:
+          return "[反馈问题指标题]";
+        case 6:
+          return "[文本题]";
+        default:
+          return "";
+      }
+    };
+    const isBooleanQuestion = (question) => {
+      return question.type === "boolean" || question.qtype === 4 && question.scoringTypeId === 5;
+    };
     const isOptionSelected = (questionId, optionId) => {
       var _a;
       if (!questionnaire.value)
@@ -38,55 +67,14 @@ const _sfc_main = {
       const question = questionnaire.value.questions.find((q) => q.id === questionId);
       if (!question || !question.answer)
         return false;
-      return question.type === "single" ? question.answer === optionId : (_a = question.answer) == null ? void 0 : _a.includes(optionId);
+      return question.type === "single" || question.type === "boolean" ? question.answer === optionId : (_a = question.answer) == null ? void 0 : _a.includes(optionId);
     };
-    const submitScore = async (questionId, scoreValue) => {
-      var _a;
-      if (submitting.value)
+    const handleTextInput = (questionId, e) => {
+      if (!questionnaire.value)
         return;
-      try {
-        submitting.value = true;
-        const now = /* @__PURE__ */ new Date();
-        const scoreTime = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}-${now.getDate().toString().padStart(2, "0")} ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
-        const scoreData = {
-          scoreId: 1,
-          targetId: 1,
-          targetUserId: 1,
-          questionnaireId: questionnaire.value.id,
-          questionId,
-          scoreValue,
-          scoreLevel: scoreValue >= 8 ? "A" : scoreValue >= 6 ? "B" : scoreValue >= 4 ? "C" : "D",
-          isModified: 0,
-          scoreTime,
-          lastModifyTime: scoreTime
-        };
-        common_vendor.index.__f__("log", "at pages/questionnaire/questionnaireDetail.vue:183", "提交的数据:", scoreData);
-        const res = await src_utils_request_request.post("/question/score", scoreData);
-        common_vendor.index.__f__("log", "at pages/questionnaire/questionnaireDetail.vue:185", "接口返回结果:", res);
-        if (res.code === 200) {
-          common_vendor.index.__f__("log", "at pages/questionnaire/questionnaireDetail.vue:188", `问题 ${questionId} 分数提交成功`, res.data);
-          const question = questionnaire.value.questions.find((q) => q.id === questionId);
-          if (question) {
-            if (question.scoreId) {
-              question.isModified = 1;
-            } else {
-              question.scoreId = (_a = res.data) == null ? void 0 : _a.scoreId;
-            }
-          }
-        } else {
-          common_vendor.index.showToast({
-            title: `提交失败: ${res.msg || "未知错误"}`,
-            icon: "none"
-          });
-        }
-      } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questionnaire/questionnaireDetail.vue:205", "提交分数异常:", err);
-        common_vendor.index.showToast({
-          title: "网络错误，提交失败",
-          icon: "none"
-        });
-      } finally {
-        submitting.value = false;
+      const question = questionnaire.value.questions.find((q) => q.id === questionId);
+      if (question) {
+        question.textAnswer = e.detail.value;
       }
     };
     const selectOption = (questionId, optionId) => {
@@ -95,12 +83,9 @@ const _sfc_main = {
       const question = questionnaire.value.questions.find((q) => q.id === questionId);
       if (!question)
         return;
-      if (question.type === "single") {
+      if (question.type === "single" || question.type === "boolean") {
         question.answer = optionId;
-        const selectedOption = question.options.find((opt) => opt.id === optionId);
-        if (selectedOption) {
-          submitScore(questionId, selectedOption.value || 0);
-        }
+        question.options.find((opt) => opt.id === optionId);
       } else if (question.type === "multiple") {
         if (!question.answer)
           question.answer = [];
@@ -110,13 +95,8 @@ const _sfc_main = {
         } else {
           question.answer.push(optionId);
         }
-        const selectedOptions = question.options.filter((opt) => question.answer.includes(opt.id));
-        const score = selectedOptions.length ? Math.round(selectedOptions.reduce((sum, opt) => sum + (opt.value || 0), 0) / selectedOptions.length) : 0;
-        submitScore(questionId, score);
+        question.options.filter((opt) => question.answer.includes(opt.id));
       }
-    };
-    const getStarScore = (star) => {
-      return star * 2;
     };
     const selectStar = (questionId, star) => {
       if (!questionnaire.value)
@@ -124,8 +104,6 @@ const _sfc_main = {
       const question = questionnaire.value.questions.find((q) => q.id === questionId);
       if (question) {
         question.answer = star;
-        const score = Math.round(star / 5 * 100);
-        submitScore(questionId, score);
       }
     };
     const getSliderPosition = (question) => {
@@ -148,45 +126,158 @@ const _sfc_main = {
       const question = questionnaire.value.questions.find((q) => q.id === questionId);
       if (question) {
         question.answer = e.detail.value;
-        const score = Math.round(e.detail.value / 10 * 100);
-        submitScore(questionId, score);
       }
+    };
+    const getStarScore = (star) => {
+      return star * 2;
+    };
+    const userInfo = common_vendor.index.getStorageSync("userInfo") || "[]";
+    const calculateTotalScore = () => {
+      let total = 0;
+      questionnaire.value.questions.forEach((question) => {
+        if (question.type === "single") {
+          const selectedOption = question.options.find((opt) => opt.id === question.answer);
+          total += (selectedOption == null ? void 0 : selectedOption.value) || 0;
+        }
+      });
+      return total;
+    };
+    const getScoreLevel = (score) => {
+      if (!score)
+        return null;
+      if (score === 10)
+        return "A";
+      if (score === 8)
+        return "B";
+      if (score === 6)
+        return "C";
+      if (score === 4)
+        return "D";
+      return "E";
     };
     const submitQuestionnaire = async () => {
       if (!questionnaire.value || submitting.value)
         return;
       const allAnswered = questionnaire.value.questions.every((question) => {
-        return question.answer !== null && question.answer !== void 0;
+        if (question.qtype === 3)
+          return true;
+        if (question.qtype === 4) {
+          if (question.scoringTypeId === 5) {
+            if (question.answer === null || question.answer === void 0)
+              return false;
+            return question.answer !== 1 || question.textAnswer && question.textAnswer.trim() !== "";
+          }
+          if (question.scoringTypeId === 6) {
+            return question.textAnswer && question.textAnswer.trim() !== "";
+          }
+        }
+        return question.answer !== null && question.answer !== void 0 && (question.type !== "multiple" || question.answer.length > 0);
       });
       if (!allAnswered) {
         common_vendor.index.showToast({
-          title: "请完成所有问题",
+          title: "请完成所有必填问题",
           icon: "none"
         });
         return;
       }
       try {
         submitting.value = true;
-        questionnaire.value.status = "completed";
-        const allQuestionnaires = JSON.parse(common_vendor.index.getStorageSync("questionnaires") || "[]");
-        const index = allQuestionnaires.findIndex((q) => q.id === questionnaire.value.id);
-        if (index !== -1) {
-          allQuestionnaires[index] = questionnaire.value;
+        const submitData = {
+          mainData: {
+            questionnaireId: questionnaire.value.id,
+            publishId: questionnaire.value.publishId || "202305001",
+            academicYearSemester: questionnaire.value.academicYearSemester || "2025-2026学年 第一学期",
+            questionnaireName: questionnaire.value.title,
+            questionnaireType: "课程评估",
+            questionnaireCategory: "",
+            evalType: "绩效评估",
+            evalTarget: "课堂教师",
+            evaluationRequirement: "必修课评估",
+            kclx: questionnaire.value.kclx,
+            skdd: questionnaire.value.skdd,
+            courseNo: questionnaire.value.courseNo,
+            classSerial: questionnaire.value.classSerial,
+            courseName: questionnaire.value.courseName,
+            studentClass: "",
+            courseDepartment: "",
+            teacherId: "T1001",
+            teacherName: questionnaire.value.teacherName,
+            teacherDepartment: "计算机学院",
+            teacherTitle: "副教授",
+            evaluatorId: userInfo.teacherId,
+            evaluatorName: userInfo.name,
+            evaluatorType: "教师",
+            evaluatorDepartment: "计算机学院",
+            totalScore: 100,
+            obtainedScore: calculateTotalScore(),
+            evaluationTime: "2024-03-15T14:30:00"
+          },
+          targetScores: questionnaire.value.questions.map((question) => {
+            let scoreValue = null;
+            let singleChoice = null;
+            let fillInBlank = null;
+            if (question.type === "slider") {
+              scoreValue = question.answer;
+            } else if (question.type === "rating") {
+              scoreValue = question.answer * 2;
+            } else if (question.type === "single" || question.type === "boolean") {
+              singleChoice = question.answer;
+              const selectedOption = question.options.find((opt) => opt.id === question.answer);
+              if (selectedOption && selectedOption.value) {
+                scoreValue = selectedOption.value;
+              }
+            } else if (question.type === "multiple") {
+              const selectedOptions = question.options.filter((opt) => question.answer.includes(opt.id));
+              if (selectedOptions.length > 0) {
+                scoreValue = Math.round(selectedOptions.reduce((sum, opt) => sum + (opt.value || 0), 0) / selectedOptions.length);
+              }
+            } else if (question.textAnswer) {
+              fillInBlank = question.textAnswer;
+            }
+            return {
+              targetUserId: userInfo.teacherId || "",
+              // 被评估教师ID
+              scoreLevel: getScoreLevel(scoreValue),
+              // 计算评分等级
+              questionnaireId: questionnaire.value.id,
+              questionId: question.id,
+              gradingMethodId: question.gmtype || 1,
+              scoreValue,
+              singleChoice,
+              fillInBlank,
+              scoreTime: (/* @__PURE__ */ new Date()).toISOString()
+            };
+          })
+        };
+        const res = await utils_request_request.post("/result/submit", submitData);
+        if (res.code === 200) {
+          questionnaire.value.status = "completed";
+          common_vendor.index.__f__("log", "at pages/questionnaire/questionnaireDetail.vue:423", "ok");
+          const allQuestionnaires = JSON.parse(common_vendor.index.getStorageSync("questionnaires") || "[]");
+          const index = allQuestionnaires.findIndex((q) => q.id === questionnaire.value.id);
+          if (index !== -1) {
+            allQuestionnaires[index] = questionnaire.value;
+          } else {
+            allQuestionnaires.push(questionnaire.value);
+          }
+          common_vendor.index.setStorageSync("questionnaires", JSON.stringify(allQuestionnaires));
+          common_vendor.index.showToast({
+            title: "问卷提交成功",
+            icon: "success"
+          });
+          setTimeout(() => common_vendor.index.navigateBack({
+            delta: 1
+          }), 800);
         } else {
-          allQuestionnaires.push(questionnaire.value);
+          common_vendor.index.showToast({
+            title: `提交失败: ${res.msg || "未知错误"}`,
+            icon: "none"
+          });
         }
-        common_vendor.index.setStorageSync("questionnaires", JSON.stringify(allQuestionnaires));
-        common_vendor.index.showToast({
-          title: "所有评分已提交",
-          icon: "success"
-        });
-        setTimeout(() => common_vendor.index.navigateBack({
-          delta: 1
-        }), 800);
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questionnaire/questionnaireDetail.vue:337", "提交问卷异常:", err);
+        common_vendor.index.__f__("error", "at pages/questionnaire/questionnaireDetail.vue:450", "提交问卷异常:", err);
         common_vendor.index.showToast({
-          title: "提交失败，请重试",
+          title: "网络错误，提交失败",
           icon: "none"
         });
       } finally {
@@ -201,8 +292,11 @@ const _sfc_main = {
           if (res.confirm && questionnaire.value) {
             questionnaire.value.questions.forEach((question) => {
               question.answer = null;
+              question.textAnswer = "";
               if (question.type === "slider") {
                 question.answer = question.min || 0;
+              } else if (question.type === "rating") {
+                question.answer = 0;
               }
             });
             questionnaire.value.status = "pending";
@@ -232,10 +326,11 @@ const _sfc_main = {
         e: common_vendor.f(questionnaire.value.questions, (question, qIndex, i0) => {
           return common_vendor.e({
             a: common_vendor.t(qIndex + 1),
-            b: common_vendor.t(question.text),
-            c: question.type === "single"
+            b: common_vendor.t(getQuestionTag(question)),
+            c: common_vendor.t(question.text),
+            d: question.type === "single"
           }, question.type === "single" ? {
-            d: common_vendor.f(question.options, (option, oIndex, i1) => {
+            e: common_vendor.f(question.options, (option, oIndex, i1) => {
               return common_vendor.e({
                 a: isOptionSelected(question.id, option.id)
               }, isOptionSelected(question.id, option.id) ? {} : {}, {
@@ -246,9 +341,9 @@ const _sfc_main = {
               });
             })
           } : {}, {
-            e: question.type === "multiple"
+            f: question.type === "multiple"
           }, question.type === "multiple" ? {
-            f: common_vendor.f(question.options, (option, oIndex, i1) => {
+            g: common_vendor.f(question.options, (option, oIndex, i1) => {
               return common_vendor.e({
                 a: isOptionSelected(question.id, option.id)
               }, isOptionSelected(question.id, option.id) ? {} : {}, {
@@ -259,9 +354,9 @@ const _sfc_main = {
               });
             })
           } : {}, {
-            g: question.type === "rating"
+            h: question.type === "rating"
           }, question.type === "rating" ? {
-            h: common_vendor.f(5, (star, k1, i1) => {
+            i: common_vendor.f(5, (star, k1, i1) => {
               return {
                 a: common_vendor.t(getStarScore(star)),
                 b: star,
@@ -270,15 +365,38 @@ const _sfc_main = {
               };
             })
           } : {}, {
-            i: question.type === "slider"
+            j: question.type === "slider"
           }, question.type === "slider" ? {
-            j: common_vendor.t(question.answer),
-            k: getSliderPosition(question),
-            l: question.answer || 1,
-            m: common_vendor.o(($event) => handleSliderChanging(question.id, $event), qIndex),
-            n: common_vendor.o(($event) => handleSliderChange(question.id, $event), qIndex)
+            k: common_vendor.t(question.answer),
+            l: getSliderPosition(question),
+            m: question.answer || 1,
+            n: common_vendor.o(($event) => handleSliderChanging(question.id, $event), qIndex),
+            o: common_vendor.o(($event) => handleSliderChange(question.id, $event), qIndex)
           } : {}, {
-            o: qIndex
+            p: isBooleanQuestion(question)
+          }, isBooleanQuestion(question) ? {
+            q: common_vendor.f(question.options, (option, oIndex, i1) => {
+              return common_vendor.e({
+                a: isOptionSelected(question.id, option.id)
+              }, isOptionSelected(question.id, option.id) ? {} : {}, {
+                b: common_vendor.t(option.text),
+                c: oIndex,
+                d: isOptionSelected(question.id, option.id) ? 1 : "",
+                e: common_vendor.o(($event) => selectOption(question.id, option.id), oIndex)
+              });
+            })
+          } : {}, {
+            r: question.qtype === 4 && question.scoringTypeId === 5 && isOptionSelected(question.id, 1)
+          }, question.qtype === 4 && question.scoringTypeId === 5 && isOptionSelected(question.id, 1) ? {
+            s: common_vendor.o([($event) => question.textAnswer = $event.detail.value, ($event) => handleTextInput(question.id, $event)], qIndex),
+            t: question.textAnswer
+          } : {}, {
+            v: question.qtype === 4 && question.scoringTypeId === 6
+          }, question.qtype === 4 && question.scoringTypeId === 6 ? {
+            w: common_vendor.o([($event) => question.textAnswer = $event.detail.value, ($event) => handleTextInput(question.id, $event)], qIndex),
+            x: question.textAnswer
+          } : {}, {
+            y: qIndex
           });
         })
       } : {}, {

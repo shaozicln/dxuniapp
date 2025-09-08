@@ -1,6 +1,5 @@
 <template>
 	<view class="questionnaire-detail-page">
-		<!-- 顶部导航栏 -->
 		<view class="page-header" v-if="questionnaire">
 			<view class="back-button" @click="handleBack">
 				<text class="back-icon">←</text>
@@ -8,18 +7,15 @@
 			<view class="header-title">{{ questionnaire.title }}</view>
 		</view>
 
-		<!-- 加载中状态 -->
 		<view class="loading-state" v-else>
 			<text>加载中...</text>
 		</view>
 
-		<!-- 问卷内容区域 -->
 		<view class="questionnaire-content" v-if="questionnaire">
 			<view class="question-item" v-for="(question, qIndex) in questionnaire.questions" :key="qIndex">
-				<view class="question-number">{{ qIndex + 1 }}.</view>
+				<view class="question-number">{{ qIndex + 1 }}. {{ getQuestionTag(question) }}</view>
 				<view class="question-text">{{ question.text }}</view>
 
-				<!-- 四种题型区分渲染 -->
 				<view class="question-options">
 					<!-- 1. 单选（圆圈） -->
 					<view v-if="question.type === 'single'" class="options-single">
@@ -58,13 +54,11 @@
 					<!-- 4. 滑动条打分 -->
 					<view v-if="question.type === 'slider'" class="options-slider">
 						<view class="slider-container">
-							<!-- 滑动提示气泡 -->
 							<view class="slider-tooltip-wrapper" :style="{ left: getSliderPosition(question) }">
 								<view class="slider-tooltip">{{ question.answer }}分</view>
 								<view class="tooltip-arrow"></view>
 							</view>
 
-							<!-- 滑块组件 -->
 							<slider :min="1" :max="10" :step="1" :value="question.answer || 1"
 								@changing="handleSliderChanging(question.id, $event)"
 								@change="handleSliderChange(question.id, $event)" activeColor="#42b983"
@@ -72,22 +66,46 @@
 								block-border-radius="50%"></slider>
 						</view>
 
-						<!-- 滑动条两端标签 -->
 						<view class="slider-labels">
 							<text>1分</text>
 							<text>10分</text>
 						</view>
 					</view>
+
+					<!-- 5. 是否选择题（关键修改：添加条件判断） -->
+					<view v-if="isBooleanQuestion(question)" class="options-boolean">
+						<view class="option-boolean" v-for="(option, oIndex) in question.options" :key="oIndex"
+							:class="{ selected: isOptionSelected(question.id, option.id) }"
+							@click="selectOption(question.id, option.id)">
+							<view class="radio-marker">
+								<view class="radio-dot" v-if="isOptionSelected(question.id, option.id)"></view>
+							</view>
+							<text>{{ option.text }}</text>
+						</view>
+					</view>
+
+					<!-- 6. 特殊问题的文本框逻辑（只对特定类型显示） -->
+					<view class="options-open" v-if="question.qtype === 4 && question.scoringTypeId === 5 && 
+					                isOptionSelected(question.id, 1)">
+						<textarea v-model="question.textAnswer" placeholder="请输入相关问题..." class="open-textarea"
+							@input="handleTextInput(question.id, $event)"></textarea>
+					</view>
+
+					<!-- 7. 纯文本框问题 -->
+					<view class="options-open" v-if="question.qtype === 4 && question.scoringTypeId === 6">
+						<textarea v-model="question.textAnswer" placeholder="请输入文本..." class="open-textarea"
+							@input="handleTextInput(question.id, $event)"></textarea>
+					</view>
 				</view>
 			</view>
 		</view>
 
-		<!-- 底部操作区 -->
 		<view class="bottom-actions" v-if="questionnaire">
 			<view class="reset-btn" v-if="questionnaire.status === 'completed'" @click="resetQuestionnaire">
 				重新填写
 			</view>
-			<button class="submit-btn" v-if="questionnaire.status !== 'completed'" @click="submitQuestionnaire" :disabled="submitting">
+			<button class="submit-btn" v-if="questionnaire.status !== 'completed'" @click="submitQuestionnaire"
+				:disabled="submitting">
 				{{ submitting ? '提交中...' : '提交问卷' }}
 			</button>
 		</view>
@@ -101,27 +119,35 @@
 	} from 'vue';
 	import {
 		post
-	} from '/src/utils/request/request'
+	} from '@/utils/request/request.js'
 
 	const questionnaire = ref(null);
-	const submitting = ref(false); // 防止重复提交
+	const submitting = ref(false);
+
+	const currentCourse = ref(JSON.parse(uni.getStorageSync('currentCourse') || '{}'));
 
 	onMounted(() => {
 		const pages = getCurrentPages();
 		const currentPage = pages[pages.length - 1];
 		const data = currentPage.options.data;
 		if (data) {
-			// 解析问卷数据
 			const currentQuestionnaire = JSON.parse(decodeURIComponent(data));
 			const allQuestionnaires = JSON.parse(uni.getStorageSync('questionnaires') || '[]');
 			const storedQuestionnaire = allQuestionnaires.find(q => q.id === currentQuestionnaire.id);
 			questionnaire.value = storedQuestionnaire || currentQuestionnaire;
 
-			// 初始化滑动条默认值
 			if (questionnaire.value) {
 				questionnaire.value.questions.forEach(question => {
-					if (question.type === 'slider' && question.answer === null) {
-						question.answer = question.min || 0;
+					if (question.answer === null || question.answer === undefined) {
+						if (question.type === 'slider') {
+							question.answer = question.min || 0;
+						} else if (question.type === 'rating') {
+							question.answer = 0;
+						}
+					}
+					// 初始化文本答案字段
+					if (question.textAnswer === undefined) {
+						question.textAnswer = '';
 					}
 				});
 			}
@@ -136,73 +162,292 @@
 		});
 	};
 
-	// 判断选项是否选中
+	const getQuestionTag = (question) => {
+		switch (question.scoringTypeId) {
+			case 1:
+				return '[单选题]';
+			case 2:
+				return '[多选题]';
+			case 3:
+				return '[打星题]';
+			case 4:
+				return '[滑动打分题]';
+			case 5:
+				return '[反馈问题指标题]';
+			case 6:
+				return '[文本题]';
+			default:
+				return '';
+		}
+	};
+
+	// 判断是否为是否题（包括通用和特殊是否题）
+	const isBooleanQuestion = (question) => {
+		// 只对需要显示是否选项的题目返回true
+		return question.type === 'boolean' ||
+			(question.qtype === 4 && question.scoringTypeId === 5);
+	};
+
 	const isOptionSelected = (questionId, optionId) => {
 		if (!questionnaire.value) return false;
 		const question = questionnaire.value.questions.find(q => q.id === questionId);
 		if (!question || !question.answer) return false;
-		return question.type === 'single' ? question.answer === optionId : question.answer?.includes(optionId);
+		return question.type === 'single' || question.type === 'boolean' ?
+			question.answer === optionId :
+			question.answer?.includes(optionId);
 	};
 
-	// 提交分数到后端
-	const submitScore = async (questionId, scoreValue) => {
-		if (submitting.value) return;
+	const handleTextInput = (questionId, e) => {
+		if (!questionnaire.value) return;
+		const question = questionnaire.value.questions.find(q => q.id === questionId);
+		if (question) {
+			question.textAnswer = e.detail.value;
+		}
+	};
+
+	const selectOption = (questionId, optionId) => {
+		if (!questionnaire.value) return;
+		const question = questionnaire.value.questions.find(q => q.id === questionId);
+		if (!question) return;
+
+		if (question.type === 'single' || question.type === 'boolean') {
+			question.answer = optionId;
+			const selectedOption = question.options.find(opt => opt.id === optionId);
+			// if (selectedOption) {
+			// 	submitScore(questionId, selectedOption.value || 0);
+			// }
+		} else if (question.type === 'multiple') {
+			if (!question.answer) question.answer = [];
+			const index = question.answer.indexOf(optionId);
+			if (index > -1) {
+				question.answer.splice(index, 1);
+			} else {
+				question.answer.push(optionId);
+			}
+			const selectedOptions = question.options.filter(opt => question.answer.includes(opt.id));
+			// const score = selectedOptions.length ?
+			// 	Math.round(selectedOptions.reduce((sum, opt) => sum + (opt.value || 0), 0) / selectedOptions.length) :
+			// 	0;
+			// submitScore(questionId, score);
+		}
+	};
+
+	const selectStar = (questionId, star) => {
+		if (!questionnaire.value) return;
+		const question = questionnaire.value.questions.find(q => q.id === questionId);
+		if (question) {
+			question.answer = star;
+			// const score = Math.round((star / 5) * 100);
+			// submitScore(questionId, score);
+		}
+	};
+
+	const getSliderPosition = (question) => {
+		const value = question.answer || 1;
+		const min = 1;
+		const max = 10;
+		const percent = ((value - min) / (max - min)) * 100;
+		return `${Math.max(0, Math.min(100, percent))}%`;
+	};
+
+	const handleSliderChanging = (questionId, e) => {
+		if (!questionnaire.value) return;
+		const question = questionnaire.value.questions.find(q => q.id === questionId);
+		if (question) question.answer = e.detail.value;
+	};
+
+	const handleSliderChange = (questionId, e) => {
+		if (!questionnaire.value) return;
+		const question = questionnaire.value.questions.find(q => q.id === questionId);
+		if (question) {
+			question.answer = e.detail.value;
+			// const score = Math.round((e.detail.value / 10) * 100);
+			// submitScore(questionId, score);
+		}
+	};
+
+	const getStarScore = (star) => {
+		return star * 2;
+	};
+
+	const userInfo = uni.getStorageSync('userInfo') || '[]';
+
+	// 计算试卷得分
+	const calculateTotalScore = () => {
+		let total = 0;
+		questionnaire.value.questions.forEach(question => {
+			if (question.type === 'single') {
+				const selectedOption = question.options.find(opt => opt.id === question.answer);
+				total += selectedOption?.value || 0;
+			}
+			// TODO：其他题型的得分计算逻辑
+		});
+		return total;
+	};
+
+
+	// 评分等级计算函数
+	const getScoreLevel = (score) => {
+		if (!score) return null;
+		if (score === 10) return 'A';
+		if (score === 8) return 'B';
+		if (score === 6) return 'C';
+		if (score === 4) return 'D';
+		return 'E';
+	};
+
+	// 在submitQuestionnaire方法中添加
+	const submitQuestionnaire = async () => {
+		if (!questionnaire.value || submitting.value) return;
+
+		// 验证所有问题是否已回答（保持原有的验证逻辑）
+		const allAnswered = questionnaire.value.questions.every(question => {
+			// 可选问题可以不回答
+			if (question.qtype === 3) return true;
+
+			// 特殊类型验证
+			if (question.qtype === 4) {
+				if (question.scoringTypeId === 5) {
+					// 必须选择是/否，选是则文本框必填
+					if (question.answer === null || question.answer === undefined) return false;
+					return question.answer !== 1 || (question.textAnswer && question.textAnswer.trim() !==
+						'');
+				}
+				if (question.scoringTypeId === 6) {
+					// 文本框必填
+					return question.textAnswer && question.textAnswer.trim() !== '';
+				}
+			}
+
+			// 其他问题必须回答
+			return question.answer !== null && question.answer !== undefined &&
+				(question.type !== 'multiple' || question.answer.length > 0);
+		});
+
+
+		if (!allAnswered) {
+			uni.showToast({
+				title: '请完成所有必填问题',
+				icon: 'none'
+			});
+			return;
+		}
 
 		try {
 			submitting.value = true;
 
-			// 获取当前时间，格式化为 "YYYY-MM-DD HH:mm:ss"
-			const now = new Date();
-			const scoreTime = `${now.getFullYear()}-${
-			      (now.getMonth() + 1).toString().padStart(2, '0')
-			    }-${
-			      now.getDate().toString().padStart(2, '0')
-			    } ${
-			      now.getHours().toString().padStart(2, '0')
-			    }:${
-			      now.getMinutes().toString().padStart(2, '0')
-			    }:${
-			      now.getSeconds().toString().padStart(2, '0')
-			    }`;
+			// 1. 构建提交数据
+			const submitData = {
+				mainData: {
+					questionnaireId: questionnaire.value.id,
+					publishId: questionnaire.value.publishId || "202305001",
+					academicYearSemester: questionnaire.value.academicYearSemester || "2025-2026学年 第一学期",
+					questionnaireName: questionnaire.value.title,
+					questionnaireType: "课程评估",
+					questionnaireCategory: '',
+					evalType: "绩效评估",
+					evalTarget: "课堂教师",
+					evaluationRequirement: "必修课评估",
+					kclx: questionnaire.value.kclx,
+					skdd: questionnaire.value.skdd,
+					courseNo: questionnaire.value.courseNo,
+					classSerial: questionnaire.value.classSerial,
+					courseName: questionnaire.value.courseName,
+					studentClass: '',
+					courseDepartment: '',
+					teacherId: "T1001",
+					teacherName: questionnaire.value.teacherName,
+					teacherDepartment: "计算机学院",
+					teacherTitle: "副教授",
+					evaluatorId: userInfo.teacherId,
+					evaluatorName: userInfo.name,
+					evaluatorType: "教师",
+					evaluatorDepartment: "计算机学院",
+					totalScore: 100.00,
+					obtainedScore: calculateTotalScore(),
+					evaluationTime: "2024-03-15T14:30:00"
+				},
+				targetScores: questionnaire.value.questions.map(question => {
+					// 根据问题类型构建不同的得分数据
+					let scoreValue = null;
+					let singleChoice = null;
+					let fillInBlank = null;
 
-			// 构造提交数据
-			const scoreData = {
-				scoreId: 1,
-				targetId: 1,
-				targetUserId: 1,
-				questionnaireId: questionnaire.value.id,
-				questionId: questionId,
-				scoreValue: scoreValue,
-				scoreLevel: scoreValue >= 8 ? 'A' : scoreValue >= 6 ? 'B' : scoreValue >= 4 ? 'C' : 'D',
-				isModified: 0,
-				scoreTime: scoreTime,
-				lastModifyTime: scoreTime
+					if (question.type === 'slider') {
+						scoreValue = question.answer;
+					} else if (question.type === 'rating') {
+						scoreValue = question.answer * 2; // 转换为10分制
+					} else if (question.type === 'single' || question.type === 'boolean') {
+						singleChoice = question.answer;
+						// 如果选项有分值，使用选项分值
+						const selectedOption = question.options.find(opt => opt.id === question
+							.answer);
+						if (selectedOption && selectedOption.value) {
+							scoreValue = selectedOption.value;
+						}
+					} else if (question.type === 'multiple') {
+						// 多选可以计算选中项的平均分
+						const selectedOptions = question.options.filter(opt => question.answer
+							.includes(opt.id));
+						if (selectedOptions.length > 0) {
+							scoreValue = Math.round(selectedOptions.reduce((sum, opt) => sum + (opt
+								.value || 0), 0) / selectedOptions.length);
+						}
+					} else if (question.textAnswer) {
+						fillInBlank = question.textAnswer;
+					}
+
+
+					return {
+						targetUserId: userInfo.teacherId || '', // 被评估教师ID
+						scoreLevel: getScoreLevel(scoreValue), // 计算评分等级
+						questionnaireId: questionnaire.value.id,
+						questionId: question.id,
+						gradingMethodId: question.gmtype || 1,
+						scoreValue,
+						singleChoice,
+						fillInBlank,
+						scoreTime: new Date().toISOString()
+					};
+				})
 			};
 
-			// 调用接口提交
-			console.log('提交的数据:', scoreData);
-			const res = await post('/question/score', scoreData);
-			console.log('接口返回结果:', res);
+
+			// 2. 调用提交接口
+			const res = await post('/result/submit', submitData);
 
 			if (res.code === 200) {
-				console.log(`问题 ${questionId} 分数提交成功`, res.data);
-				const question = questionnaire.value.questions.find(q => q.id === questionId);
-				if (question) {
-					if (question.scoreId) {
-						question.isModified = 1;
-					} else {
-						// 安全获取scoreId
-						question.scoreId = res.data?.scoreId;
-					}
+				// 3. 提交成功处理
+				questionnaire.value.status = 'completed';
+
+				console.log("ok");
+
+				// 更新本地存储
+				const allQuestionnaires = JSON.parse(uni.getStorageSync('questionnaires') || '[]');
+				const index = allQuestionnaires.findIndex(q => q.id === questionnaire.value.id);
+				if (index !== -1) {
+					allQuestionnaires[index] = questionnaire.value;
+				} else {
+					allQuestionnaires.push(questionnaire.value);
 				}
+				uni.setStorageSync('questionnaires', JSON.stringify(allQuestionnaires));
+
+				uni.showToast({
+					title: '问卷提交成功',
+					icon: 'success'
+				});
+
+				setTimeout(() => uni.navigateBack({
+					delta: 1
+				}), 800);
 			} else {
 				uni.showToast({
 					title: `提交失败: ${res.msg || '未知错误'}`,
 					icon: 'none'
 				});
 			}
-		} catch(err) {
-			console.error('提交分数异常:', err);
+		} catch (err) {
+			console.error('提交问卷异常:', err);
 			uni.showToast({
 				title: '网络错误，提交失败',
 				icon: 'none'
@@ -212,139 +457,6 @@
 		}
 	};
 
-	// 单选/多选选择选项
-	const selectOption = (questionId, optionId) => {
-		if (!questionnaire.value) return;
-		const question = questionnaire.value.questions.find(q => q.id === questionId);
-		if (!question) return;
-
-		if (question.type === 'single') {
-			question.answer = optionId;
-			// 提交分数
-			const selectedOption = question.options.find(opt => opt.id === optionId);
-			if (selectedOption) {
-				submitScore(questionId, selectedOption.value || 0);
-			}
-		} else if (question.type === 'multiple') {
-			if (!question.answer) question.answer = [];
-			const index = question.answer.indexOf(optionId);
-			if (index > -1) {
-				question.answer.splice(index, 1);
-			} else {
-				question.answer.push(optionId);
-			}
-			// 多选分数计算
-			const selectedOptions = question.options.filter(opt => question.answer.includes(opt.id));
-			const score = selectedOptions.length ?
-				Math.round(selectedOptions.reduce((sum, opt) => sum + (opt.value || 0), 0) / selectedOptions.length) :
-				0;
-			submitScore(questionId, score);
-		}
-	};
-
-	// 星级评分选中逻辑
-	const isStarSelected = (questionId, index) => {
-		if (!questionnaire.value) return false;
-		const question = questionnaire.value.questions.find(q => q.id === questionId);
-		if (!question || question.answer === null) return false;
-		const optionIndex = question.options.findIndex(opt => opt.id === question.answer);
-		return index <= optionIndex;
-	};
-
-	// 选择星级
-	const getStarScore = (star) => {
-		return star * 2;
-	};
-
-	const selectStar = (questionId, star) => {
-		if (!questionnaire.value) return;
-		const question = questionnaire.value.questions.find(q => q.id === questionId);
-		if (question) {
-			question.answer = star;
-			const score = Math.round((star / 5) * 100);
-			submitScore(questionId, score);
-		}
-	};
-
-	// 计算滑块位置百分比
-	const getSliderPosition = (question) => {
-		const value = question.answer || 1;
-		const min = 1;
-		const max = 10;
-		const percent = ((value - min) / (max - min)) * 100;
-		return `${Math.max(0, Math.min(100, percent))}%`;
-	};
-
-	// 滑动过程中实时更新
-	const handleSliderChanging = (questionId, e) => {
-		if (!questionnaire.value) return;
-		const question = questionnaire.value.questions.find(q => q.id === questionId);
-		if (question) question.answer = e.detail.value;
-	};
-
-	// 滑动结束确认并提交
-	const handleSliderChange = (questionId, e) => {
-		if (!questionnaire.value) return;
-		const question = questionnaire.value.questions.find(q => q.id === questionId);
-		if (question) {
-			question.answer = e.detail.value;
-			const score = Math.round((e.detail.value / 10) * 100);
-			submitScore(questionId, score);
-		}
-	};
-
-	// 提交问卷（整体标记完成状态）
-	const submitQuestionnaire = async () => {
-		if (!questionnaire.value || submitting.value) return;
-
-		// 验证所有问题是否已回答
-		const allAnswered = questionnaire.value.questions.every(question => {
-			return question.answer !== null && question.answer !== undefined;
-		});
-
-		if (!allAnswered) {
-			uni.showToast({
-				title: '请完成所有问题',
-				icon: 'none'
-			});
-			return;
-		}
-
-		try {
-			submitting.value = true;
-			
-			// 标记问卷完成状态
-			questionnaire.value.status = 'completed';
-
-			// 更新本地存储
-			const allQuestionnaires = JSON.parse(uni.getStorageSync('questionnaires') || '[]');
-			const index = allQuestionnaires.findIndex(q => q.id === questionnaire.value.id);
-			if (index !== -1) {
-				allQuestionnaires[index] = questionnaire.value;
-			} else {
-				allQuestionnaires.push(questionnaire.value);
-			}
-			uni.setStorageSync('questionnaires', JSON.stringify(allQuestionnaires));
-
-			uni.showToast({
-				title: '所有评分已提交',
-				icon: 'success'
-			});
-			setTimeout(() => uni.navigateBack({
-				delta: 1
-			}), 800);
-		} catch (err) {
-			console.error('提交问卷异常:', err);
-			uni.showToast({
-				title: '提交失败，请重试',
-				icon: 'none'
-			});
-		} finally {
-			submitting.value = false;
-		}
-	};
-
-	// 重置问卷
 	const resetQuestionnaire = () => {
 		uni.showModal({
 			title: '提示',
@@ -353,8 +465,11 @@
 				if (res.confirm && questionnaire.value) {
 					questionnaire.value.questions.forEach(question => {
 						question.answer = null;
+						question.textAnswer = ''; // 清空文本答案
 						if (question.type === 'slider') {
 							question.answer = question.min || 0;
+						} else if (question.type === 'rating') {
+							question.answer = 0;
 						}
 					});
 					questionnaire.value.status = 'pending';
@@ -375,7 +490,6 @@
 </script>
 
 <style scoped>
-	/* 样式保持不变 */
 	.questionnaire-detail-page {
 		background-color: #f5f5f5;
 		min-height: 100vh;
@@ -383,7 +497,6 @@
 		padding-bottom: 140rpx;
 	}
 
-	/* 顶部导航栏样式 */
 	.page-header {
 		height: 120rpx;
 		background-color: #87CEEB;
@@ -425,7 +538,6 @@
 		white-space: nowrap;
 	}
 
-	/* 问卷内容样式 */
 	.questionnaire-content {
 		padding: 30rpx;
 	}
@@ -443,6 +555,19 @@
 		font-weight: 500;
 		color: #333;
 		margin-bottom: 15rpx;
+	}
+
+	.question-number {
+		color: #f56c6c;
+		font-weight: bold;
+	}
+
+	.question-number {
+		color: #409eff;
+	}
+
+	.question-number {
+		color: #faad14;
 	}
 
 	.question-text {
@@ -484,7 +609,8 @@
 		position: relative;
 	}
 
-	.option-single.selected .radio-marker {
+	.option-single.selected .radio-marker,
+	.option-boolean.selected .radio-marker {
 		border-color: #42b983;
 	}
 
@@ -593,7 +719,6 @@
 		height: 80rpx;
 	}
 
-	/* 滑动提示气泡 */
 	.slider-tooltip-wrapper {
 		position: absolute;
 		top: -50rpx;
@@ -621,14 +746,12 @@
 		margin: 0 auto;
 	}
 
-	/* 滑块样式优化 */
 	slider {
 		width: 100%;
 		height: 80rpx;
 		margin: 0 auto;
 	}
 
-	/* 标签样式优化 */
 	.slider-labels {
 		display: flex;
 		justify-content: space-between;
@@ -640,7 +763,53 @@
 		padding: 0 10rpx;
 	}
 
-	/* 底部操作区 */
+	/* 是否题样式（一行显示，均匀分布） */
+	.options-boolean {
+		display: flex;
+		justify-content: space-around;
+		gap: 20rpx;
+		padding: 10rpx 0;
+		width: 100%;
+		box-sizing: border-box;
+	}
+
+	.option-boolean {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 25rpx 30rpx;
+		border: 1rpx solid #eaeaea;
+		border-radius: 12rpx;
+		font-size: 26rpx;
+		color: #666;
+		transition: all 0.2s;
+		box-sizing: border-box;
+	}
+
+	.option-boolean.selected {
+		border-color: #42b983;
+		background-color: #f6ffed;
+	}
+
+	/* 开放问题样式 */
+	.options-open {
+		padding: 10rpx 0;
+	}
+
+	.open-textarea {
+		width: 100%;
+		min-height: 200rpx;
+		padding: 20rpx;
+		border: 1rpx solid #eaeaea;
+		border-radius: 12rpx;
+		font-size: 26rpx;
+		color: #333;
+		line-height: 1.6;
+		resize: vertical;
+		box-sizing: border-box;
+	}
+
 	.bottom-actions {
 		position: fixed;
 		bottom: 0;
@@ -684,7 +853,6 @@
 		background-color: #fff;
 	}
 
-	/* 加载状态 */
 	.loading-state {
 		display: flex;
 		justify-content: center;

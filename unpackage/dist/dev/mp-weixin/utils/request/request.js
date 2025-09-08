@@ -3,7 +3,7 @@ const common_vendor = require("../../common/vendor.js");
 const getBaseURL = () => {
   var _a, _b, _c;
   const instance = common_vendor.getCurrentInstance();
-  let baseUrl = (_c = (_b = (_a = instance == null ? void 0 : instance.appContext) == null ? void 0 : _a.config) == null ? void 0 : _b.globalProperties) == null ? void 0 : _c.$URL;
+  let baseUrl = ((_c = (_b = (_a = instance == null ? void 0 : instance.appContext) == null ? void 0 : _a.config) == null ? void 0 : _b.globalProperties) == null ? void 0 : _c.$URL) || "http://localhost:8080";
   return baseUrl.replace(/\/$/, "");
 };
 const request = (options) => {
@@ -13,7 +13,7 @@ const request = (options) => {
     const path = fullUrl.replace(/^\/+/, "");
     fullUrl = `${baseURL}/${path}`;
   }
-  const token = common_vendor.index.getStorageSync("Admin-Token") || "";
+  const token = common_vendor.index.getStorageSync("token") || "";
   const defaultHeaders = {
     "Accept": "*/*",
     "Connection": "keep-alive",
@@ -34,7 +34,7 @@ const request = (options) => {
       // 注意uni-app中是header而非headers
       success: (res) => {
         if (res.statusCode === 401) {
-          common_vendor.index.removeStorageSync("Admin-Token");
+          common_vendor.index.removeStorageSync("token");
           common_vendor.index.showToast({
             title: "登录已过期，请重新登录",
             icon: "none"

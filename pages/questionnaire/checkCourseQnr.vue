@@ -2,17 +2,25 @@
 	<view class="check-course-container">
 		<!-- 顶部标题栏 -->
 		<view class="header">
-			<view class="title">选择课程</view>
-			<view class="filter-btn" @click="showFilter = !showFilter">筛选</view>
+			<view class="title">{{ currentCollege ? currentCollege : '选择学院' }}</view>
+			<view class="back-btn" @click="handleBack" v-if="currentCollege">返回</view>
 		</view>
 
-		<!-- 课程列表区域 -->
-		<view class="course-list">
+		<!-- 学院列表区域 (未选择学院时显示) -->
+		<view class="college-list" v-if="!currentCollege">
+			<view class="college-card" v-for="college in filteredColleges" :key="college"
+				@click="handleCollegeClick(college)">
+				<view class="college-name">{{ college }}</view>
+				<view class="course-count">包含 {{ getCourseCountByCollege(college) }} 门课程</view>
+			</view>
+		</view>
+
+		<!-- 课程列表区域 (选择学院后显示) -->
+		<view class="course-list" v-if="currentCollege">
 			<view class="course-card" v-for="course in filteredCourses" :key="course.id"
 				@click="handleCourseClick(course)">
 				<view class="course-name">{{ course.courseName }}</view>
 				<view class="teacher-name">-- {{ course.teacherName }}</view>
-
 
 				<view class="more-btn" @click.stop="showDetail(course)">
 					<view class="dot"></view>
@@ -21,7 +29,6 @@
 				</view>
 			</view>
 		</view>
-
 
 		<!-- 详情弹窗 -->
 		<view v-if="currentDetail" class="detail-modal">
@@ -36,21 +43,17 @@
 			</view>
 		</view>
 	</view>
-</template>
+	</template>
 
-<script setup>
+	<script setup>
 	import {
 		ref,
 		onMounted,
 		computed
 	} from 'vue';
 	import {
-		get,
-		post,
-		put,
-		del,
-		request
-	} from '@/src/utils/request/request.js'
+		get
+	} from '@/utils/request/request.js'
 
 	// 接收关闭事件
 	const emit = defineEmits(['close', 'selectCourse']);
@@ -60,15 +63,33 @@
 	const loading = ref(false);
 	const error = ref('');
 
+	// 学院相关状态
+	const currentCollege = ref(''); // 当前选中的学院
+	const allColleges = computed(() => {
+		// 获取所有不重复的学院
+		const colleges = new Set();
+		courses.value.forEach(course => {
+			if (course.courseCollege) {
+				colleges.add(course.courseCollege);
+			}
+		});
+		return Array.from(colleges);
+	});
+
 	// 筛选相关
 	const showFilter = ref(false);
 	const filterText = ref('');
-	const filteredCourses = computed(() => {
-		if (!filterText.value) return courses.value;
-		return courses.value.filter(course =>
-			course.courseName.includes(filterText.value) ||
-			course.teacherName.includes(filterText.value)
+	const filteredColleges = computed(() => {
+		if (!filterText.value) return allColleges.value;
+		return allColleges.value.filter(college =>
+			college.includes(filterText.value)
 		);
+	});
+
+	// 根据当前学院筛选课程
+	const filteredCourses = computed(() => {
+		if (!currentCollege.value) return [];
+		return courses.value.filter(course => course.courseCollege === currentCollege.value);
 	});
 
 	// 详情相关
@@ -79,16 +100,14 @@
 		fetchCourses();
 	});
 
-	import {
-		getCurrentInstance
-	} from "vue";
-
 	const fetchCourses = async () => {
 		try {
 			loading.value = true;
 			error.value = '';
 			
+			console.log('开始请求课程数据')
 			const res = await get('/teaching_info/classInfo/list');
+			console.log('请求返回结果:', res);
 
 			if (res.code === 200) {
 				courses.value = res.rows || [];
@@ -100,35 +119,38 @@
 		} catch (err) {
 			error.value = '网络错误，请检查接口是否可用';
 			console.error('请求异常:', err);
+		} finally {
 			loading.value = false;
 		}
 	};
 
-	const selectCourse = (course) => {
-		uni.setStorageSync('selectedCourse', {
-			courseNo: course.courseNo,
-			classSerial: course.classSerial
-		});
-		uni.navigateBack({
-			delta: 1
-		});
+	// 计算某个学院的课程数量
+	const getCourseCountByCollege = (college) => {
+		return courses.value.filter(course => course.courseCollege === college).length;
 	};
 
-	// 课程点击事件（返回questionnaire.vue）
+	// 学院点击事件
+	const handleCollegeClick = (college) => {
+		currentCollege.value = college;
+	};
+
+	// 返回按钮事件（从课程列表返回学院列表）
+	const handleBack = () => {
+		currentCollege.value = '';
+	};
+
+	// 课程点击事件
 	const handleCourseClick = (course) => {
-		// 触发选择事件，传递courseNo和classSerial
 		emit('selectCourse', course.courseNo, course.classSerial);
 	};
 
 	// 显示详情
 	const showDetail = (course) => {
-		currentDetail.value = {
-			...course
-		};
+		currentDetail.value = { ...course };
 	};
-</script>
+	</script>
 
-<style scoped>
+	<style scoped>
 	.check-course-container {
 		height: 100%;
 		display: flex;
@@ -150,10 +172,35 @@
 		color: #333;
 	}
 
-	.filter-btn {
+	.filter-btn, .back-btn {
 		font-size: 28rpx;
 		color: #42b983;
 		padding: 10rpx 20rpx;
+	}
+
+	/* 学院列表 */
+	.college-list {
+		flex: 1;
+		overflow-y: auto;
+		padding: 20rpx;
+	}
+
+	.college-card {
+		background-color: #f9f9f9;
+		border-radius: 16rpx;
+		padding: 30rpx;
+		margin-bottom: 20rpx;
+	}
+
+	.college-name {
+		font-size: 32rpx;
+		color: #333;
+	}
+
+	.course-count {
+		font-size: 26rpx;
+		color: #666;
+		margin-top: 10rpx;
 	}
 
 	/* 课程列表 */
@@ -245,4 +292,4 @@
 		padding: 15rpx 0;
 		border-top: 1rpx solid #eee;
 	}
-</style>
+	</style>

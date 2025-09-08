@@ -1,15 +1,12 @@
-·<template>
+<template>
 	<view class="questionnaire-page">
-
 		<view class="page-header">
-			<!-- 返回按钮 -->
 			<view class="back-button" @click="handleBack">
 				<text class="back-icon">←</text>
 			</view>
 			<view class="header-title">我的问卷</view>
 		</view>
 
-		<!-- 筛选栏 -->
 		<view class="filter-bar">
 			<view class="filter-item" :class="{ active: currentFilter === 'all' }" @click="currentFilter = 'all'">全部
 			</view>
@@ -20,9 +17,9 @@
 		</view>
 
 		<view v-if="isInitialState" class="initial-hint">
-			点击左下角左下角选择对应课程问卷
+			点击左下角选择对应课程问卷
 		</view>
-		<!-- 问卷列表区域 -->
+
 		<view v-else class="questionnaire-list">
 			<view class="questionnaire-item" v-for="(questionnaire, index) in filteredQuestionnaires" :key="index"
 				@click="navigateToDetail(questionnaire)">
@@ -41,14 +38,12 @@
 			</view>
 		</view>
 
-		<!-- 左下角悬浮按钮（三条杠图标） -->
 		<view class="float-button" @click="showCheckCourse = true">
 			<view class="bar"></view>
 			<view class="bar"></view>
 			<view class="bar"></view>
 		</view>
 
-		<!-- 弹窗容器（包含checkCourseOnr组件） -->
 		<view v-if="showCheckCourse" class="modal-overlay" @click="showCheckCourse = false">
 			<view class="modal-content" @click.stop>
 				<check-course-qnr @close="showCheckCourse = false" @selectCourse="handleSelectCourse" />
@@ -69,35 +64,29 @@
 	import {
 		onShow
 	} from '@dcloudio/uni-app';
-	import checkCourseQnr from './checkCourseQnr.vue';
+	import checkCourseQnr from '@/pages/questionnaire/checkCourseQnr.vue';
 
 	import {
 		get
-	} from '@/src/utils/request/request';
+	} from '@/utils/request/request.js';
 
 	const questionnaires = ref([]);
-	// 初始状态控制变量
 	const isInitialState = ref(true);
 
-	// 抽离的加载数据方法（通用逻辑）
 	const loadQuestionnaires = () => {
 		const savedQuestionnaires = uni.getStorageSync('questionnaires');
 		if (savedQuestionnaires) {
 			const loadedData = JSON.parse(savedQuestionnaires);
-			// 清空原有数据并替换为最新数据（确保响应式更新）
 			questionnaires.value.splice(0, questionnaires.value.length);
 			loadedData.forEach(item => {
 				questionnaires.value.push(item);
 			});
-			// 有数据则退出初始状态
 			isInitialState.value = loadedData.length === 0;
 		} else {
-			// 首次加载且无本地数据时，保存初始数据
 			uni.setStorageSync('questionnaires', JSON.stringify(questionnaires));
 		}
 	};
 
-	//通过课程信息获取问卷数据
 	const fetchCourseQuestionnaires = async (courseNo, classSerial) => {
 		try {
 			uni.showLoading({
@@ -111,36 +100,40 @@
 
 			uni.hideLoading();
 			if (res.code === 200) {
-				// 转换API返回数据格式
+				console.log(res.data);
 				const formattedData = res.data.map(item => ({
 					id: item.questionnaireId,
 					title: item.questionnaireName,
-					grade: '课程问卷', // 可根据实际需求调整
+					grade: '课程问卷',
 					description: `课程: ${item.courseName} 教师: ${item.teacherName}`,
-					date: new Date().toLocaleDateString(), // 使用当前日期或接口返回的日期
-					status: 'pending', // 默认为未完成状态
+					date: new Date().toLocaleDateString(),
+					status: 'pending',
+					teacherName: item.teacherName,
+					classSerial: item.classSerial,
+					courseName: item.courseName,
+					courseNo: item.courseNo,
+					kclx: item.kclx,
 					questions: item.questions.map(question => ({
 						id: question.id,
 						text: question.name,
 						type: mapQuestionType(question.scoringTypeId),
-						//options: getDefaultOptions(question.scoringTypeId),
-						// 为滑动条和星级设置范围属性
+						qtype: question.questionTypeId,
+						scoringTypeId: question.scoringTypeId, // 新增：保留评分类型ID用于详情页判断
+						gmtype: question.gradingMethodId,
+						options: getOptionsByType(question.scoringTypeId, question
+							.questionTypeId),
 						min: question.scoringTypeId === 3 ? 0 : (question
 							.scoringTypeId === 4 ? 1 : undefined),
 						max: question.scoringTypeId === 3 ? 5 : (question
 							.scoringTypeId === 4 ? 10 : undefined),
 						step: question.scoringTypeId === 4 ? 1 : undefined,
-						answer: null
+						answer: null,
+						textAnswer: null // 文本框内容
 					}))
 				}));
 
-				// questionnaires.value = res.rows || [];
 				questionnaires.value = formattedData;
-				console.log(questionnaires.value);
-				// 保存到本地存储
 				uni.setStorageSync('questionnaires', JSON.stringify(formattedData));
-
-				// 获取数据后退出初始状态
 				isInitialState.value = false;
 			} else {
 				uni.showToast({
@@ -157,55 +150,121 @@
 			});
 		}
 	};
-	// 辅助函数：映射题型（根据实际业务调整）
+
 	const mapQuestionType = (typeId) => {
-		// 假设1:单选题, 2:多选题, 3:评分题, 4:滑动条
 		const typeMap = {
 			1: 'single',
 			2: 'multiple',
 			3: 'rating',
-			4: 'slider'
+			4: 'slider',
+			5: 'boolean',
+			6: 'text'
 		};
-		return typeMap[typeId] || 'single';
+		return typeMap[typeId] || 'text';
 	};
 
-	// 辅助函数：根据题型生成默认选项（根据实际业务调整）
-	const getDefaultOptions = (typeId) => {
-		switch (typeId) {
-			case 1: // 单选题
+	const getOptionsByType = (scoringTypeId, questionTypeId) => {
+		// 文本框题处理
+		if (questionTypeId === 6) {
+			return {
+				type: 'text',
+				placeholder: '请输入文本...'
+			};
+		}
+
+		// scoringTypeId=5
+		if (questionTypeId === 4 && scoringTypeId === 5) {
+			return [{
+					id: 1,
+					text: '是',
+					value: 1
+				},
+				{
+					id: 2,
+					text: '否',
+					value: 0
+				}
+			];
+		}
+
+		// 反馈题
+		if (scoringTypeId === 5 && questionTypeId !== 4) {
+			return [{
+					id: 1,
+					text: '是',
+					value: 1
+				},
+				{
+					id: 2,
+					text: '否',
+					value: 0
+				}
+			];
+		}
+		if (questionTypeId === 4) {
+			switch (scoringTypeId) {
+				case 5: // 需要显示是否选项+文本框
+					return [{
+							id: 1,
+							text: '是',
+							value: 1
+						},
+						{
+							id: 2,
+							text: '否',
+							value: 0
+						}
+					];
+				case 6: // 只显示文本框
+					return [];
+				default:
+					return [];
+			}
+		}
+
+		switch (scoringTypeId) {
+			case 1:
 				return [{
 						id: 1,
-						text: '选项1'
+						text: 'A  优',
+						value: 10
 					},
 					{
 						id: 2,
-						text: '选项2'
+						text: 'B  良',
+						value: 8
 					},
 					{
 						id: 3,
-						text: '选项3'
+						text: 'C  合格',
+						value: 6
 					},
 					{
 						id: 4,
-						text: '选项4'
+						text: 'D  不合格',
+						value: 4
 					}
 				];
 			case 2: // 多选题
 				return [{
 						id: 1,
-						text: '选项A'
+						text: 'A  选项A',
+						value: 25
 					},
 					{
 						id: 2,
-						text: '选项B'
+						text: 'B  选项B',
+						value: 25
 					},
 					{
 						id: 3,
-						text: '选项C'
+						text: 'C  选项C',
+						value: 25
 					},
 					{
 						id: 4,
-						text: '选项D'
+						text: 'D  选项D',
+						value: 25
 					}
 				];
 			case 3: // 打星题
@@ -216,25 +275,39 @@
 				return {
 					min: 1, max: 10, step: 1
 				};
+			case 5: // 是否选择题
+				return [{
+						id: 1,
+						text: '是',
+						value: 1
+					},
+					{
+						id: 2,
+						text: '否',
+						value: 0
+					}
+				];
 			default:
 				return [];
 		}
 	};
 
-	// 页面加载时初始化数据
 	onMounted(() => {
 		loadQuestionnaires();
 	});
 
 	onShow(() => {
-		loadQuestionnaires(); // 从详情页返回时重新加载数据
+		//loadQuestionnaires();
+		const savedQuestionnaires = uni.getStorageSync('questionnaires');
+		if (savedQuestionnaires) {
+			const loadedData = JSON.parse(savedQuestionnaires);
+			questionnaires.value = [...loadedData]; // 重新赋值触发更新
+			isInitialState.value = loadedData.length === 0;
+		}
 	});
 
-
-	// 当前筛选条件
 	const currentFilter = ref('all');
 
-	// 显示的问卷列表
 	const filteredQuestionnaires = computed(() => {
 		if (currentFilter.value === 'all') {
 			return questionnaires.value;
@@ -245,28 +318,33 @@
 		}
 	});
 
-	// 跳转到问卷详情页（小程序路由）
 	const navigateToDetail = (questionnaire) => {
+
 		uni.navigateTo({
 			url: `/pages/questionnaire/questionnaireDetail?data=${encodeURIComponent(JSON.stringify(questionnaire))}`
 		});
 	};
 
+	// 保存逻辑
 	const handleBack = () => {
+		// 本地存储
+		uni.setStorageSync('questionnaires', JSON.stringify(questionnaires.value));
+
 		uni.navigateBack({
-			delta: 1 // 返回上一级页面
+			delta: 1
 		});
 	};
 
-	// 控制弹窗显示
 	const showCheckCourse = ref(false);
 
-	// 接收课程选择事件
 	const handleSelectCourse = (courseNo, classSerial) => {
 		showCheckCourse.value = false;
-		// 这里可以处理课程选择后的逻辑（如更新问卷数据）
 		fetchCourseQuestionnaires(courseNo, classSerial);
-		console.log('选中课程：', courseNo, classSerial);
+
+		uni.setStorageSync('currentCourse', JSON.stringify({
+			courseNo: courseNo,
+			classSerial: classSerial
+		}));
 	};
 </script>
 
@@ -299,8 +377,6 @@
 		box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.1);
 		margin-bottom: 15px;
 	}
-
-
 
 	.filter-bar {
 		display: flex;
@@ -432,14 +508,6 @@
 		background-color: rgba(255, 255, 255, 0.3);
 	}
 
-	.back-icon {
-		color: #fff;
-		font-size: 36rpx;
-		font-weight: bold;
-	}
-
-
-	/* 标题样式（保持居中） */
 	.header-title {
 		color: #777;
 		font-size: 36rpx;
@@ -447,13 +515,11 @@
 		flex: 1;
 		text-align: center;
 		margin-left: -100rpx;
-		/* 抵消返回按钮宽度，确保标题居中 */
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
 
-	/* 悬浮按钮样式 */
 	.float-button {
 		position: fixed;
 		left: 30rpx;
@@ -478,7 +544,6 @@
 		margin: 4rpx 0;
 	}
 
-	/* 弹窗遮罩层 */
 	.modal-overlay {
 		position: fixed;
 		top: 0;
@@ -491,7 +556,6 @@
 		align-items: flex-end;
 	}
 
-	/* 弹窗内容（占屏幕下方70%） */
 	.modal-content {
 		width: 100%;
 		height: 85vh;

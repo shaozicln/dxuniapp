@@ -1,3 +1,4 @@
+//https://jxpj.neau.edu.cn/api/v1
 import App from './App'
 import { request, get, post, put, del } from '@/utils/request/request.js'
 
@@ -6,7 +7,7 @@ import Vue from 'vue'
 import './uni.promisify.adaptor'
 
 // 全局注册基础URL
-Vue.prototype.$URL = 'https://jxpj.neau.edu.cn/api/v1'
+Vue.prototype.$URL = 'http://localhost:8080'
 
 // 全局注册请求方法
 Vue.prototype.$request = request
@@ -29,7 +30,7 @@ import { createSSRApp } from 'vue'
 export function createApp() {
   const app = createSSRApp(App)
   
-  app.config.globalProperties.$URL = 'https://jxpj.neau.edu.cn/api/v1'
+  app.config.globalProperties.$URL = 'http://localhost:8080'
   
   app.config.globalProperties.$request = request
   app.config.globalProperties.$get = get
@@ -37,6 +38,8 @@ export function createApp() {
   app.config.globalProperties.$put = put
   app.config.globalProperties.$del = del
   
-  return {app};
+  return {
+    app
+  }
 }
 // #endif

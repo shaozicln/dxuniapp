@@ -18,10 +18,32 @@
 		font-weight: 500;
 		color: #333;
 }
-.filter-btn.data-v-94c4d16a {
+.filter-btn.data-v-94c4d16a, .back-btn.data-v-94c4d16a {
 		font-size: 28rpx;
 		color: #42b983;
 		padding: 10rpx 20rpx;
+}
+
+	/* 学院列表 */
+.college-list.data-v-94c4d16a {
+		flex: 1;
+		overflow-y: auto;
+		padding: 20rpx;
+}
+.college-card.data-v-94c4d16a {
+		background-color: #f9f9f9;
+		border-radius: 16rpx;
+		padding: 30rpx;
+		margin-bottom: 20rpx;
+}
+.college-name.data-v-94c4d16a {
+		font-size: 32rpx;
+		color: #333;
+}
+.course-count.data-v-94c4d16a {
+		font-size: 26rpx;
+		color: #666;
+		margin-top: 10rpx;
 }
 
 	/* 课程列表 */
@@ -105,3 +127,4 @@
 		padding: 15rpx 0;
 		border-top: 1rpx solid #eee;
 }
+	

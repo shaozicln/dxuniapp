@@ -50,14 +50,6 @@ const request = (options) => {
     });
   });
 };
-const get = (url, data = {}, options = {}) => {
-  return request({
-    ...options,
-    url,
-    data,
-    method: "GET"
-  });
-};
 const post = (url, data = {}, options = {}) => {
   return request({
     ...options,
@@ -66,6 +58,5 @@ const post = (url, data = {}, options = {}) => {
     method: "POST"
   });
 };
-exports.get = get;
 exports.post = post;
 //# sourceMappingURL=../../../../.sourcemap/mp-weixin/src/utils/request/request.js.map

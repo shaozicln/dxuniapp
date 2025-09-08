@@ -4,7 +4,7 @@ import {
 
 export const getBaseURL = () => {
   const instance = getCurrentInstance();
-  let baseUrl = instance?.appContext?.config?.globalProperties?.$URL ;
+  let baseUrl = instance?.appContext?.config?.globalProperties?.$URL || 'http://localhost:8080';
   return baseUrl.replace(/\/$/, '');
 };
 
@@ -20,7 +20,7 @@ export const request = (options) => {
 	}
 
 	// 2. 自动获取本地存储的Token
-	const token = uni.getStorageSync('Admin-Token') || '';
+	const token = uni.getStorageSync('token') || '';
 
 	// 3. 构建请求头（自动携带Token）
 	const defaultHeaders = {
@@ -43,7 +43,7 @@ export const request = (options) => {
 			success: (res) => {
 				// 统一处理401 Token失效
 				if (res.statusCode === 401) {
-					uni.removeStorageSync('Admin-Token');
+					uni.removeStorageSync('token');
 					uni.showToast({
 						title: '登录已过期，请重新登录',
 						icon: 'none'
