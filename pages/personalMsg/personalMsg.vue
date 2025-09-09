@@ -5,16 +5,16 @@
         <text class="back-icon">←</text>
       </view>
       <view class="avatar-container">
-		  <image 
+        <image 
           class="avatar" 
           :src="userInfo.avatar" 
           mode="widthFix"
-        ></image>
+        />
       </view>
     </view>
 
     <view class="info-list">
-		<view 
+      <view 
         :class="[
           'info-item',
           { 'editable-item': item.canEdit }
@@ -38,151 +38,95 @@
       >
         退出登录
       </button>
+      <text class="logout-tip">点击退出登录后，个人信息将全部清空</text>
     </view>
   </view>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
+import { userInfoUtil } from '/utils/personnalMsg/userInfoUtil';
+import { logoutUtil } from '/utils/personnalMsg/logoutUtil';
+import { storageUtil } from '/utils/personnalMsg/storage.js';
 
+//  响应式数据
 const userInfo = reactive({
-  avatar: '/static/default-avatar.png', // 本地默认头像路径（确保文件存在）
+  avatar: '/static/default-avatar.png',
   name: '未设置',
   identity: '未登录',
   gender: '未设置',
   college: '未设置',
   className: '未设置',
   major: '未设置',
-  studentId: '未设置',
-  teacherId: '',
-  contact: '未设置'
+  studentID: '未设置',
+  teacherID: '',
 });
+const infoItems = ref([]); 
 
-const infoItems = ref([]); // 列表数据（响应式）
-const editableFields = [
-  { label: '性别', field: 'gender', type: 'select', options: ['男', '女', '保密'] },
-  { label: '学院', field: 'college', type: 'input', placeholder: '请输入学院名称' },
-  { label: '班级', field: 'className', type: 'input', placeholder: '请输入班级（如计科2301）' },
-  { label: '专业', field: 'major', type: 'input', placeholder: '请输入专业名称' },
-  { label: '联系方式', field: 'contact', type: 'input', placeholder: '请输入手机号' }
-];
 
+// 页面导航：返回上一页
 const navigateBack = () => {
   uni.navigateBack({ delta: 1 }).catch(() => {
     uni.redirectTo({ url: '/pages/my/my' });
   });
 };
 
+
+// 信息编辑：调用userInfoUtil获取配置，避免硬编码
 const handleInfoEdit = (item) => {
-  const fieldConfig = editableFields.find(config => config.label === item.label);
+  if (!item.canEdit) return;
+  const editableFields = userInfoUtil.getEditableFields(userInfo.identity);
+  const fieldConfig = editableFields.find(cfg => cfg.label === item.label);
   if (!fieldConfig) return;
 
+  // 下拉选择（性别）
   if (fieldConfig.type === 'select') {
     uni.showActionSheet({
       itemList: fieldConfig.options,
       success: (res) => {
-        const selectedValue = fieldConfig.options[res.tapIndex];
-        userInfo[fieldConfig.field] = selectedValue; // 更新响应式数据
-        updateInfoListAndStorage(); // 同步列表和存储
+        userInfo[fieldConfig.field] = fieldConfig.options[res.tapIndex];
+        updateInfoAndStorage(); // 同步列表+存储
       },
-      fail: (err) => console.error('选择失败:', err)
+      fail: (err) => console.error('编辑失败:', err)
     });
   } 
-  // 输入型弹窗（如学院、班级）
+  // 输入框（学院/班级/专业）
   else if (fieldConfig.type === 'input') {
     uni.showModal({
       title: `修改${item.label}`,
       editable: true,
       placeholderText: fieldConfig.placeholder,
-      value: item.value !== '未设置' ? item.value : '', 
+      value: item.value !== '未设置' ? item.value : '',
       success: (res) => {
-        if (res.confirm && res.content.trim()) { 
-          const inputValue = res.content.trim();
-          userInfo[fieldConfig.field] = inputValue; // 更新响应式数据
-          updateInfoListAndStorage(); // 同步列表和存储
+        if (res.confirm && res.content.trim()) {
+          userInfo[fieldConfig.field] = res.content.trim();
+          updateInfoAndStorage(); // 同步列表+存储
         }
       },
-      fail: (err) => console.error('输入弹窗失败:', err)
+      fail: (err) => console.error('编辑失败:', err)
     });
   }
 };
 
-//  同步列表数据 + 保存到本地存储
-const updateInfoListAndStorage = () => {
 
-  infoItems.value = [
-    { label: '姓名', value: userInfo.name, canEdit: false },
-    { label: '身份', value: userInfo.identity, canEdit: false },
-    { label: '性别', value: userInfo.gender, canEdit: true },
-    { label: '学院', value: userInfo.college, canEdit: true },
-    { label: '班级', value: userInfo.className, canEdit: true },
-    { label: '专业', value: userInfo.major, canEdit: true },
-    { 
-      label: userInfo.identity === '老师' ? '教工号' : '学号', 
-      value: userInfo.teacherId || userInfo.studentId, 
-      canEdit: false 
-    },
-    { label: '联系方式', value: userInfo.contact, canEdit: true }
-  ];
-
-  try {
-    const oldUserInfo = uni.getStorageSync('userInfo') || {};
-    const newUserInfo = { ...oldUserInfo, ...userInfo }; 
-    uni.setStorageSync('userInfo', newUserInfo);
-    console.log('用户信息已保存到本地:', newUserInfo);
-  } catch (err) {
-    console.error('保存失败:', err);
-    uni.showToast({ title: '保存失败，请重试', icon: 'none' });
-  }
+//  同步信息列表+本地存储（调用工具简化逻辑）
+const updateInfoAndStorage = () => {
+  infoItems.value = userInfoUtil.generateInfoList(userInfo);
+  storageUtil.saveUserInfo(userInfo);
 };
-
+// 退出登录：直接调用logoutUtil
 const handleLogout = () => {
-  uni.showModal({
-    title: '确认退出',
-    content: '退出后需重新登录，是否继续？',
-    confirmText: '退出',
-    cancelText: '取消',
-    success: (res) => {
-      if (res.confirm) {
-        // 清除用户登录状态
-        try {
-          uni.removeStorageSync('userInfo');
-        } catch (err) {
-          console.error('清除登录状态失败:', err);
-        }
-        uni.showToast({ title: '已退出登录', icon: 'none', duration: 1500 });
-        // 延迟跳转，确保提示可见
-        setTimeout(() => {
-          uni.redirectTo({ url: '/pages/login/login' });
-        }, 1500);
-      }
-    }
-  });
+  logoutUtil.doLogout(); 
 };
-
+// 页面挂载：初始化用户信息
 onMounted(() => {
-  try {
-    const storedUserInfo = uni.getStorageSync('userInfo');
-    if (storedUserInfo) {
-      Object.keys(userInfo).forEach(key => {
-        if (storedUserInfo[key] !== undefined && storedUserInfo[key] !== '') {
-          userInfo[key] = storedUserInfo[key];
-        }
-      });
-      userInfo.identity = userInfo.teacherId?.startsWith('Z') ? '老师' : '学生';
-    }
-  } catch (err) {
-    console.error('读取用户信息失败:', err);
-    uni.showToast({ title: '信息加载失败', icon: 'none' });
-  }
-  // 初始化列表数据
-  updateInfoListAndStorage();
+  userInfoUtil.initFromStorage(userInfo);
+  updateInfoAndStorage();
 });
-
 </script>
+    
 
 <style scoped>
-/* 样式保持不变，无需修改 */
 .profile-page {
   background-color: #f5f5f5;
   min-height: 100vh;
@@ -317,9 +261,11 @@ onMounted(() => {
 
 .logout-container {
   display: flex;
+  flex-direction: column; /* 改为纵向排列：按钮在上，文字在下 */
   justify-content: center;
   margin-top: 60rpx;
   padding: 0 30rpx;
+  gap: 15rpx; /* 按钮和文字之间的间距 */
 }
 
 .logout-button {
@@ -343,5 +289,11 @@ onMounted(() => {
 
 .logout-button::after {
   border: none;
+}
+.logout-tip {
+  font-size: 24rpx; 
+  color: #999;
+  text-align: center; 
+  padding: 0 20rpx; 
 }
 </style>

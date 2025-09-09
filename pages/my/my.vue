@@ -49,16 +49,22 @@
     </view>
   </view>
 </template>
-
 <script setup lang="ts">
-
 import { reactive, onMounted, ref } from 'vue';
-import { navigateToWithLoading } from '../../src/utils/navigate/navigate'; 
+import { navigateToWithLoading } from '../../utils/navigate/navigate'; 
+import { userInfoUtil } from '../../utils/personnalMsg/userInfoUtil';
 
+// 定义接口
 interface UserInfo {
-  avatarUrl?: string;
+  avatar: string;
   name: string;
-  teacherId?: string;
+  identity: string;
+  gender?: string;
+  college?: string;
+  className?: string;
+  major?: string;
+  studentID?: string;
+  teacherID?: string;
 }
 
 interface MessageItem {
@@ -68,41 +74,41 @@ interface MessageItem {
   unread: boolean;
 }
 
-// 响应式数据
+// 响应式数据 - 只声明一次
 const userInfo = reactive<UserInfo>({
-  avatarUrl: '/static/default-avatar.png',
-  name: '未登录'
+   avatar: '/static/default-avatar.png',
+  name: '未设置',
+  identity: '未登录'
 });
-const userRole = ref<string>('未登录'); // 存储判断后的身份
+
+const userRole = ref<string>(userInfo.identity);
 const messageList = reactive<MessageItem[]>([
   { id: 1, title: '系统通知', content: '新系统通知...', unread: true },
   { id: 2, title: '互动消息', content: '学生发来的未读消息', unread: true }, 
   { id: 3, title: '测试消息', content: '未读测试', unread: true }
 ]);
 
+// 页面挂载逻辑
 onMounted(() => {
   try {
-    const storedUserInfo = uni.getStorageSync('userInfo') as UserInfo;
-
-    if (storedUserInfo && storedUserInfo.name) {
-      userInfo.name = storedUserInfo.name;
-      if (storedUserInfo.avatarUrl) {
-        userInfo.avatarUrl = storedUserInfo.avatarUrl;
-      }
-
-      const teacherId = storedUserInfo.teacherId || '';
-      userRole.value = teacherId.startsWith('Z') ? '老师' : '学生';
-
-      console.log('读取本地用户信息成功，身份：', userRole.value);
-    } else {
-      console.warn('本地用户信息不完整');
-      userRole.value = '未登录';
-    }
+    // 调用工具类初始化用户信息
+    userInfoUtil.initFromStorage(userInfo);
+    
+    // 同步身份信息到userRole
+    userRole.value = userInfo.identity;
+    
+    console.log('核心信息初始化完成：', { 
+      姓名: userInfo.name, 
+      身份: userRole.value 
+    });
   } catch (err) {
-    console.error('读取用户信息失败:', err);
+    console.error('核心信息初始化失败:', err);
+    uni.showToast({ title: '信息加载失败', icon: 'none' });
     userRole.value = '身份未知';
   }
 });
+
+// 消息处理函数
 const handleItemTap = (item: MessageItem) => {
   console.log('点击消息:', item);
   if (item.unread) {
@@ -153,6 +159,7 @@ const goToProfile = async () => {
   }
 };
 </script>
+
 <style scoped>
 
 .my-container {

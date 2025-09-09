@@ -1,14 +1,16 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
-const src_utils_navigate_navigate = require("../../src/utils/navigate/navigate.js");
+const utils_navigate_navigate = require("../../utils/navigate/navigate.js");
+const utils_personnalMsg_userInfoUtil = require("../../utils/personnalMsg/userInfoUtil.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   __name: "my",
   setup(__props) {
     const userInfo = common_vendor.reactive({
-      avatarUrl: "/static/default-avatar.png",
-      name: "未登录"
+      avatar: "/static/default-avatar.png",
+      name: "未设置",
+      identity: "未登录"
     });
-    const userRole = common_vendor.ref("未登录");
+    const userRole = common_vendor.ref(userInfo.identity);
     const messageList = common_vendor.reactive([
       { id: 1, title: "系统通知", content: "新系统通知...", unread: true },
       { id: 2, title: "互动消息", content: "学生发来的未读消息", unread: true },
@@ -16,26 +18,20 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     ]);
     common_vendor.onMounted(() => {
       try {
-        const storedUserInfo = common_vendor.index.getStorageSync("userInfo");
-        if (storedUserInfo && storedUserInfo.name) {
-          userInfo.name = storedUserInfo.name;
-          if (storedUserInfo.avatarUrl) {
-            userInfo.avatarUrl = storedUserInfo.avatarUrl;
-          }
-          const teacherId = storedUserInfo.teacherId || "";
-          userRole.value = teacherId.startsWith("Z") ? "老师" : "学生";
-          common_vendor.index.__f__("log", "at pages/my/my.vue:96", "读取本地用户信息成功，身份：", userRole.value);
-        } else {
-          common_vendor.index.__f__("warn", "at pages/my/my.vue:98", "本地用户信息不完整");
-          userRole.value = "未登录";
-        }
+        utils_personnalMsg_userInfoUtil.userInfoUtil.initFromStorage(userInfo);
+        userRole.value = userInfo.identity;
+        common_vendor.index.__f__("log", "at pages/my/my.vue:100", "核心信息初始化完成：", {
+          姓名: userInfo.name,
+          身份: userRole.value
+        });
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/my/my.vue:102", "读取用户信息失败:", err);
+        common_vendor.index.__f__("error", "at pages/my/my.vue:105", "核心信息初始化失败:", err);
+        common_vendor.index.showToast({ title: "信息加载失败", icon: "none" });
         userRole.value = "身份未知";
       }
     });
     const handleItemTap = (item) => {
-      common_vendor.index.__f__("log", "at pages/my/my.vue:107", "点击消息:", item);
+      common_vendor.index.__f__("log", "at pages/my/my.vue:113", "点击消息:", item);
       if (item.unread) {
         const index = messageList.findIndex((msg) => msg.id === item.id);
         if (index !== -1)
@@ -62,21 +58,21 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           }
         },
         fail: (err) => {
-          common_vendor.index.__f__("warn", "at pages/my/my.vue:136", "长按菜单调用失败:", err);
+          common_vendor.index.__f__("warn", "at pages/my/my.vue:142", "长按菜单调用失败:", err);
         }
       });
     };
     const goToProfile = async () => {
       try {
-        await src_utils_navigate_navigate.navigateToWithLoading("/pages/personalMsg/personalMsg", {
+        await utils_navigate_navigate.navigateToWithLoading("/pages/personalMsg/personalMsg", {
           loadingText: "加载中...",
           onError: (err) => {
-            common_vendor.index.__f__("warn", "at pages/my/my.vue:146", "跳转异常:", err);
+            common_vendor.index.__f__("warn", "at pages/my/my.vue:152", "跳转异常:", err);
             common_vendor.index.showToast({ title: "跳转失败", icon: "none" });
           }
         });
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/my/my.vue:151", "跳转个人信息页失败:", err);
+        common_vendor.index.__f__("error", "at pages/my/my.vue:157", "跳转个人信息页失败:", err);
         common_vendor.index.showToast({ title: "跳转失败", icon: "none" });
       }
     };

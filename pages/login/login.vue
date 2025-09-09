@@ -1,19 +1,17 @@
 <template>
 	<view class="login-container">
 		<view class="form-box" v-if="showLoginForm">
-			<view class="title">{{ form.teacherId ? '欢迎回来' : '请登录' }}</view>
-			<input class="input" placeholder="请输入教工号/学工号(例：Z10005)" @input="form.teacherId = $event.detail.value.trim()"
-				:value="form.teacherId" :disabled="isLoading" />
+			<view class="title">{{ form.userID ? '欢迎回来' : '请登录' }}</view>
+			<input class="input" placeholder="请输入教工号/学工号(例：Z10005)" @input="form.userID = $event.detail.value.trim()"
+				:value="form.userID" :disabled="isLoading" />
 			<input class="input" placeholder="请输入姓名" @input="form.name = $event.detail.value.trim()" :value="form.name"
 				:disabled="isLoading" />
-			<button class="main-btn" @tap="handleLogin" :disabled="!form.teacherId || !form.name || isLoading">
+			<button class="main-btn" @tap="handleLogin" :disabled="!form.userID || !form.name || isLoading">
 				{{ isLoading ? '登录中...' : '请点击登录' }}
 			</button>
 		</view>
 		<view class="campus-net-tip">若无法登录，请检查是否连接校园网</view>
-		<!-- 加载提示（Token校验/登录过程中显示） -->
 		<view class="loading-box" v-if="isLoading && !showLoginForm">
-			<!-- uni-app内置loading组件（兼容多端） -->
 			<uni-loading type="spin" size="36"></uni-loading>
 			<view class="loading-text">正在验证登录状态...</view>
 		</view>
@@ -22,220 +20,168 @@
 		</view>
 	</view>
 </template>
-
 <script>
-	import {
-		get,
-		post
-	} from '/src/utils/request/request'
-	export default {
-		data() {
-			console.log('登录页组件初始化 - data数据初始化完成')
-			return {
-				showLoginForm: false, // 是否显示登录表单
-				form: {
-					teacherId: '', // 教工号/学工号
-					name: '' // 姓名
-				},
-				msg: '', // 提示消息
-				msgType: '', // 消息类型：error/success
-				isLoading: false, // 加载状态
-				msgTimer: null // 消息定时器（防止重复触发）
-			};
-		},
+// 导入拆分后的工具
+import { get, post } from '/utils/request/request'
+import { loginMsgUtil } from '/utils/login/msgUtil'
+import { loginFlowUtil } from '/utils/login/flowUtil'
+import { loginStorageUtil } from '/utils/login/storageUtil'
 
-		onLoad() {
-			console.log('登录页onLoad生命周期触发 - 开始执行初始化逻辑')
-			// 一进入页面就执行「自动获取code+请求token」+「本地Token校验」
-			this.initLoginFlow()
-		},
+export default {
+  data() {
+    console.log('登录页组件初始化 - data数据初始化完成')
+    return {
+      showLoginForm: false, // 是否显示登录表单
+      form: {
+        userID: '', 
+        name: ''   
+      },
+      msg: '',          // 提示消息
+      msgType: '',      // 消息类型：error/success
+      isLoading: false, // 加载状态
+      msgTimer: null    // 消息定时器（防止重复触发）
+    };
+  },
 
-		methods: {
-			showMsg(message, type = 'error') {
-				console.log(`[消息提示] 类型: ${type}, 内容: ${message}`)
-				if (this.msgTimer) {
-					clearTimeout(this.msgTimer)
-				}
-				this.msg = message
-				this.msgType = type
-				this.msgTimer = setTimeout(() => {
-					console.log('消息提示自动关闭')
-					this.msg = ''
-				}, 5000)
-			},
+  onLoad() {
+    console.log('登录页onLoad生命周期触发 - 开始执行初始化逻辑')
+    this.initLoginFlow() 
+  },
 
-			/**
-			 * 先自动调用微信登录获取code，请求后端/loginByCode获取token
-			 * 再校验本地Token，决定是否显示登录表单
-			 */
-			async initLoginFlow() {
-				console.log('进入initLoginFlow - 启动自动登录流程（获取code+请求token）')
-				this.isLoading = true
-				try {
-					// 自动获取微信登录code（无需用户操作）
-					const wxLoginRes = await new Promise((resolve, reject) => {
-						uni.login({
-							provider: 'weixin',
-							success: (res) => {
-								if (res.code) {
-									console.log('自动获取微信code成功:', res.code)
-									resolve(res.code)
-								} else {
-									reject(new Error(`自动获取code失败: ${res.errMsg}`))
-								}
-							},
-							fail: (err) => {
-								reject(new Error(`微信登录接口调用失败: ${err.errMsg}`))
-							}
-						})
-					})
+  methods: {
+    async initLoginFlow() {
+      console.log('进入initLoginFlow - 启动自动登录流程')
+      this.isLoading = true
+      try { 
+        //  获取微信code
+        const wxCode = await loginFlowUtil.getWxCode();
+        console.log('自动获取微信code成功:', wxCode)
 
-					// 自动调用后端/loginByCode，传递code获取token
-					console.log('自动调用后端/loginByCode接口，传递code请求token')
-					// const autoLoginRes = await post('https://jxpj.neau.edu.cn/api/v1/loginByCode', {
-					const autoLoginRes = await post('http://localhost:8080/loginByCode', {
-						weixincode: wxLoginRes, // 传递自动获取的微信code
-					})
+        // 调用自动登录接口
+        const { autoLoginRes, userID } = await loginFlowUtil.autoLogin(wxCode);
 
-					// 若自动获取token成功，先存储到本地
-					if (autoLoginRes?.token) {
-						console.log('自动登录成功，获取到token:', autoLoginRes.token)
-						// 存储自动获取的token（若后端返回openid也一并存储）
-						uni.setStorageSync('autoToken', autoLoginRes.token)
-						this.showMsg('自动获取登录凭证成功', 'success')
-					} else {
-						console.log('自动登录未获取到有效token，需后续用户手动登录')
-						this.showMsg('未获取到相关信息，请手动登录', 'error')
-					}
+        //  处理自动登录结果
+        if (autoLoginRes?.token && userID) {
+          console.log('后端获取成功，成功获取到用户信息', { token: autoLoginRes.token })
+          const userInfo = loginStorageUtil.buildUserInfo(
+            userID,
+            autoLoginRes.name,
+            autoLoginRes.token
+          );
+          // 存储自动登录数据
+          loginStorageUtil.saveAutoLoginData(autoLoginRes.token, userInfo);
+          // 显示成功消息
+          loginMsgUtil.showMsg(this, '自动登录成功，正在跳转', 'success');
+        } else if (autoLoginRes?.token) {
+          console.log('自动登录仅获取到token，缺少用户信息')
+          loginStorageUtil.saveAutoLoginData(autoLoginRes.token);
+          loginMsgUtil.showMsg(this, '需补充用户信息，请手动登录', 'error');
+        } else {
+          console.log('自动登录失败，未获取到有效token')
+          loginMsgUtil.showMsg(this, '自动登录失败，请手动登录', 'error');
+        }
 
-				} catch (err) {
-					console.error('自动登录流程异常:', err)
-					this.showMsg('自动登录失败，请重试', 'error')
-				} finally {
-					// 无论自动登录成功与否，都校验本地Token（决定是否显示表单）
-					await this.checkLocalToken()
-					this.isLoading = false
-					console.log('自动登录流程完成，进入本地Token校验阶段')
-				}
-			},
+      } catch (err) {
+        console.error('自动登录流程异常:', err)
+        loginMsgUtil.showMsg(this, `自动登录失败: ${err.message || '网络异常'}`, 'error');
+      } finally {
+        // 无论自动登录结果如何，都校验本地状态
+        await this.checkLocalToken()
+        this.isLoading = false
+        console.log('自动登录流程结束，已执行本地Token校验')
+      }
+    },
+    async checkLocalToken() {
+      console.log('进入checkLocalToken - 校验本地登录状态')
+      this.isLoading = true
+      try {
+        // 获取本地登录数据
+        const { localAutoToken, localManualToken, localUser } = loginStorageUtil.getLocalLoginData();
+        console.log('本地存储数据校验:', {
+          hasAutoToken: !!localAutoToken,
+          hasManualToken: !!localManualToken,
+          hasUserInfo: !!localUser,
+          userID: localUser?.userID || '无'
+        })
 
-			// 校验本地Token：有则直接跳转，无则显示登录表单（逻辑保留，增加兼容性）
-			async checkLocalToken() {
-				console.log('进入checkLocalToken方法 - 开始校验本地登录状态')
-				this.isLoading = true
-				try {
-					// 关键修改2：同时校验「自动登录的token」和「手动登录的token」
-					const localAutoToken = uni.getStorageSync('autoToken') // 自动登录的token
-					const localManualToken = uni.getStorageSync('token') // 手动登录的token
-					const localUser = uni.getStorageSync('userInfo')
+        // 补全用户身份字段
+        let completeUser = loginStorageUtil.completeUserIdentity(localUser);
+        if (completeUser !== localUser) {
+          uni.setStorageSync('userInfo', completeUser); 
+        }
 
-					console.log('从本地存储获取数据:', {
-						hasAutoToken: !!localAutoToken,
-						hasManualToken: !!localManualToken,
-						hasUserInfo: !!localUser
-					})
+        //  判定登录状态：有效则跳转首页
+        const hasValidToken = localAutoToken || localManualToken;
+        const hasCompleteUser = completeUser?.userID && (completeUser.teacherID || completeUser.studentID);
+        
+        if (hasValidToken && hasCompleteUser) {
+          console.log('本地登录状态有效，跳转首页')
+          setTimeout(() => {
+            uni.setStorageSync('isLogin', true)
+            uni.switchTab({ url: '/pages/index/index' })
+          }, 1000)
+        } else {
+          console.log('本地登录状态无效，显示登录表单')
+          this.showLoginForm = true
+        }
 
-					// 有任意有效token+完整用户信息 → 直接跳首页
-					if ((localAutoToken || localManualToken) && localUser?.teacherId) {
-						console.log('本地验证通过: 存在有效Token和完整用户信息')
-						this.showMsg('已登录，正在跳转', 'success')
-						setTimeout(() => {
-							uni.setStorageSync('isLogin', true)
-							uni.switchTab({
-								url: '/pages/index/index'
-							})
-						}, 1000)
-					} else {
-						// 无有效token/用户信息 → 显示登录表单
-						console.log('本地无有效Token，需要用户手动登录')
-						this.showLoginForm = true
-					}
+      } catch (err) {
+        console.error('本地Token校验异常:', err)
+        loginMsgUtil.showMsg(this, '登录状态校验失败，请重试', 'error');
+        this.showLoginForm = true
+      } finally {
+        this.isLoading = false
+        console.log('localToken校验流程结束')
+      }
+    },
+    async handleLogin() {
+      console.log('进入handleLogin - 执行手动登录')
+      this.isLoading = true
+      try {
+        //  校验输入格式
+        const { trimmedUserID, trimmedName } = loginFlowUtil.validateInput(
+          this.form.userID,
+          this.form.name
+        );
 
-				} catch (err) {
-					console.error('Token校验过程发生异常:', err)
-					this.showMsg('登录状态校验异常，请重试')
-					this.showLoginForm = true
-				} finally {
-					this.isLoading = false
-					console.log('checkLocalToken方法执行完成')
-				}
-			},
+        // 获取微信code
+        const wxCode = await loginFlowUtil.getWxCode();
 
-			/**
-			 * 用户手动登录逻辑（保留原功能，兼容用户手动输入信息的场景）
-			 */
-			async handleLogin() {
-				console.log('进入handleLogin方法 - 执行用户手动登录逻辑')
-				this.isLoading = true
-				try {
-					//  校验用户输入（教工号/姓名不能为空）
-					if (!this.form.teacherId.trim() || !this.form.name.trim()) {
-						throw new Error('请输入完整的教工号和姓名')
-					}
+        // 调用手动登录接口
+        const loginRes = await loginFlowUtil.manualLogin(wxCode, trimmedUserID);
 
-					// 获取微信code
-					const wxLoginRes = await new Promise((resolve, reject) => {
-						uni.login({
-							provider: 'weixin',
-							success: (res) => res.code ? resolve(res.code) : reject(new Error(
-								`获取code失败: ${res.errMsg}`)),
-							fail: (err) => reject(new Error(`微信登录接口失败: ${err.errMsg}`))
-						})
-					})
+        // 处理登录结果
+        if (loginRes?.token) {
+          console.log('手动登录成功，获取到token:', loginRes.token)
+          const userInfo = loginStorageUtil.buildUserInfo(
+            trimmedUserID,
+            trimmedName,
+            loginRes.token
+          );
+          // 存储手动登录数据
+          loginStorageUtil.saveManualLoginData(loginRes.token, userInfo);
+          // 显示成功消息并跳转
+          loginMsgUtil.showMsg(this, '登录成功，正在跳转', 'success');
+          setTimeout(() => {
+            uni.switchTab({ url: '/pages/index/index' })
+          }, 1000)
+        } else {
+          throw new Error(loginRes?.msg || '登录失败，请检查账号信息是否正确')
+        }
 
-					// 调用后端/loginByCode（传递code+用户信息，获取最终token）
-					// const loginRes = await post('https://jxpj.neau.edu.cn/api/v1/login', {
-					const loginRes = await post('http://127.0.0.1:8080/login', {
-						weixincode: wxLoginRes,
-						username: this.form.teacherId.trim(),
-						password: this.form.teacherId.trim()
-					})
-
-					//处理手动登录结果
-					if (loginRes?.token) {
-						console.log('手动登录成功，获取到token:', loginRes.token)
-						// 构造完整用户信息
-						const userInfo = {
-							teacherId: this.form.teacherId.trim(),
-							name: this.form.name.trim(),
-							loginTime: new Date().toLocaleString(),
-							token: loginRes.token,
-						}
-
-						// 存储手动登录的信息（覆盖自动登录的临时token）
-						uni.setStorageSync('token', loginRes.token)
-						uni.setStorageSync('userInfo', userInfo)
-						uni.setStorageSync('isLogin', true)
-
-						this.showMsg('登录成功，即将跳转', 'success')
-						setTimeout(() => {
-							uni.switchTab({
-								url: '/pages/index/index'
-							})
-						}, 1000)
-
-					} else {
-						const errorMsg = loginRes?.msg || '登录失败，请检查教工号和姓名'
-						throw new Error(errorMsg)
-					}
-
-				} catch (err) {
-					console.error('手动登录异常:', err)
-					this.showMsg(err.message || '登录异常，请重试')
-				} finally {
-					this.isLoading = false
-				}
-			}
-
-		},
-
-		onUnload() {
-			console.log('登录页onUnload生命周期触发')
-			if (this.msgTimer) {
-				clearTimeout(this.msgTimer)
-			}
-		}
-	};
+      } catch (err) {
+        console.error('手动登录异常:', err)
+        loginMsgUtil.showMsg(this, err.message || '登录异常，请重试', 'error');
+      } finally {
+        this.isLoading = false
+      }
+    }
+  },
+  onUnload() {
+    console.log('登录页onUnload生命周期触发')
+    loginMsgUtil.clearMsgTimer(this);
+  }
+};
 </script>
 <style scoped>
 	.login-container {
@@ -338,40 +284,40 @@
 	}
 
 	/* 消息提示基础样式 */
-	.msg {
-		font-size: 26rpx;
-		text-align: center;
-		margin-top: 20rpx;
-		padding: 16rpx 20rpx;
-		border-radius: 10rpx;
-		width: 100%;
-		max-width: 500rpx;
-	}
-
-	/* 错误消息样式 */
-	.error-msg {
-		color: #f56c6c;
-		background: rgba(245, 108, 108, 0.1);
-		border: 1px solid #fde2e2;
-	}
-
-	/* 成功消息样式 */
-	.success-msg {
-		color: #67c23a;
-		background: rgba(103, 194, 58, 0.1);
-		border: 1px solid #e1f3d8;
-	}
-
-	/* 校园网提示样式 */
-	.campus-net-tip {
-		font-size: 30rpx;
-		color: #666;
-		text-align: center;
-		padding: 10rpx 0;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 10rpx;
-		margin-top: 10rpx;
-	}
-</style>
+		.msg {
+			font-size: 26rpx;
+			text-align: center;
+			margin-top: 20rpx;
+			padding: 16rpx 20rpx;
+			border-radius: 10rpx;
+			width: 100%;
+			max-width: 500rpx; /* 补充完整：原代码截断为"max-width: 5"，此处修正为500rpx，与表单宽度一致 */
+		}
+	
+		/* 错误消息样式 */
+		.error-msg {
+			color: #f56c6c;
+			background: rgba(245, 108, 108, 0.1);
+			border: 1px solid #fde2e2;
+		}
+	
+		/* 成功消息样式 */
+		.success-msg {
+			color: #67c23a;
+			background: rgba(103, 194, 58, 0.1);
+			border: 1px solid #e1f3d8;
+		}
+	
+		/* 校园网提示样式 */
+		.campus-net-tip {
+			font-size: 30rpx;
+			color: #666;
+			text-align: center;
+			padding: 10rpx 0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 10rpx;
+			margin-top: 10rpx;
+		}
+	</style>
