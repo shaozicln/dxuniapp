@@ -1,159 +1,312 @@
 
+/* 全局容器：优化背景色梯度，增加页面呼吸感 */
 .my-container.data-v-2f1ef635 {
   display: flex;
   flex-direction: column;
-  background-color: #f8fef8; 
+  background-color: #fafdff; /* 更柔和的底色，替代原#f8fef8 */
   min-height: 100vh;
+  padding-top: 30rpx;
+  padding-bottom: 15rpx; /* 增加底部留白，避免内容贴边 */
+  transition: background-color 0.3s ease; /* 背景色过渡，提升页面切换流畅度 */
 }
 
-/* 个人信息区域 */
+/* 个人信息区域：强化视觉焦点，优化渐变质感 */
 .profile-section.data-v-2f1ef635 {
-  position: relative;
   width: 100%;
-  height: 30vh;
-  background: linear-gradient(to bottom, #c9edf5, #f8fef8); 
+  min-height: 220rpx; /* 适当增高，提升空间感 */
+  background: linear-gradient(135deg, #e6f7ff, #fafdff); /* 改135°渐变，更自然 */
   display: flex;
-  flex-direction: row;
   align-items: center;
-  padding: 0 40rpx;
+  padding: 32rpx 40rpx; /* 调整内边距，更均匀 */
+   padding-top: 100rpx;
   box-sizing: border-box;
-  margin-bottom: 0;
+  margin-bottom: 24rpx;
+  border-bottom-left-radius: 36rpx; /* 增大圆角，更显柔和 */
+  border-bottom-right-radius: 36rpx;
+  box-shadow: 0 8rpx 20rpx rgba(180, 225, 255, 0.15); /* 增加轻微阴影，提升层次感 */
+  transition: all 0.3s ease; /* 整体过渡，优化点击反馈 */
 }
 
-/* 头像样式 */
-.avatar.data-v-2f1ef635 {
-  width: 120rpx;
-  height: 120rpx;
+/* 头像容器：增加精致感，避免扁平 */
+.avatar-container.data-v-2f1ef635 {
+  width: 130rpx; /* 适当增大头像，提升视觉权重 */
+  height: 130rpx;
   border-radius: 50%;
-  border: 3rpx solid #c9edf5; 
-  margin-right: 20rpx; 
+  border: 4rpx solid #fff; /* 改白色边框，与渐变背景对比更清晰 */
+  overflow: hidden;
+  margin-right: 30rpx;
+  box-shadow: 0 4rpx 12rpx rgba(120, 200, 255, 0.2); /* 头像加阴影，更立体 */
+}
+.avatar.data-v-2f1ef635 {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  transition: transform 0.3s ease; /* 头像 hover 放大，增加交互感 */
+}
+.avatar-container:hover .avatar.data-v-2f1ef635 {
+  transform: scale(1.05); /* 轻微放大，不突兀 */
 }
 
-/* 用户信息包裹层 */
+/* 用户信息容器：优化对齐和间距 */
 .user-info-wrapper.data-v-2f1ef635 {
   flex: 1;
   display: flex;
-  justify-content: flex-start; 
+  justify-content: space-between;
   align-items: center;
 }
-
-/* 用户信息内容 */
 .user-info.data-v-2f1ef635 {
   display: flex;
   flex-direction: column;
+  gap: 12rpx; /* 增大间距，避免文字拥挤 */
 }
 
-/* 昵称样式 */
+/* 昵称样式：强化视觉层级 */
 .nickname.data-v-2f1ef635 {
-  font-size: 36rpx;
-  font-weight: bold;
-  color: #444; 
-  text-align: left;
+  font-size: 38rpx; /* 适当增大字体 */
+  font-weight: 600;
+  color: #2d3748; /* 深灰色，替代原#333，更显高级 */
+  line-height: 1.5;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.05); /* 轻微文字阴影，提升清晰度 */
 }
 
-/* 描述文本样式 */
+/* 身份描述：优化颜色和字体 */
 .desc.data-v-2f1ef635 {
-  font-size: 28rpx;
-  color: #777; 
-  margin-top: 8rpx;
-  text-align: left;
+  font-size: 28rpx; /* 增大字体，提升可读性 */
+  color: #718096; /* 柔和的灰色，替代原#666 */
+  line-height: 1.5;
 }
 
-/* 消息列表区域 */
+/* 箭头图标：优化大小和透明度 */
+.arrow-icon.data-v-2f1ef635 {
+  width: 32rpx;
+  height: 32rpx;
+  opacity: 0.7;
+  transition: all 0.3s ease; /* 箭头 hover 效果 */
+}
+.profile-section:hover .arrow-icon.data-v-2f1ef635 {
+  opacity: 1;
+  transform: translateX(4rpx); /* 箭头轻微右移，引导用户点击 */
+}
+
+/* 个人信息区域点击态：更柔和的反馈 */
+.profile-tap.data-v-2f1ef635 {
+  opacity: 0.95;
+  background: linear-gradient(135deg, #d9f0ff, #f5faff); /* 点击时渐变加深 */
+  box-shadow: 0 6rpx 18rpx rgba(180, 225, 255, 0.1);
+}
+
+/* 消息列表区域：优化内边距和背景 */
 .message-section.data-v-2f1ef635 {
   flex: 1;
-  padding: 20rpx 10rpx;
+  padding: 0 24rpx; /* 调整内边距，与个人信息区域呼应 */
   box-sizing: border-box;
 }
 
-/* 板块标题样式 */
+/* 列表标题：强化视觉引导 */
 .section-title.data-v-2f1ef635 {
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 20rpx;
-  border-left: 10rpx solid #90ee90; 
-  padding-left: 10rpx;
+  font-size: 34rpx; /* 增大字体 */
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 24rpx;
+  padding-left: 18rpx; /* 调整左内边距 */
+  border-left: 12rpx solid #87e8de; /* 更清新的青色，替代原#90ee90 */
+  display: flex;
+  align-items: center;
+  gap: 12rpx; /* 增大间距 */
 }
 
-/* 空列表提示 */
-.empty-tip.data-v-2f1ef635 {
-  font-size: 28rpx;
-  color: #999;
-  text-align: center;
-  padding: 50rpx 0;
+/* 未读数量：优化大小和颜色，更醒目但不刺眼 */
+.unread-count.data-v-2f1ef635 {
+  width: 40rpx; /* 增大尺寸 */
+  height: 40rpx;
+  border-radius: 50%;
+  background-color: #ff6b6b; /* 柔和的珊瑚红，替代原#ff4d4f */
+  color: #fff;
+  font-size: 24rpx; /* 增大字体 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2rpx 8rpx rgba(255, 107, 107, 0.3); /* 小红点加阴影，更立体 */
+  animation: pulse-2f1ef635 2s infinite ease-in-out; /* 轻微脉冲动画，提醒用户 */
 }
 
-/* 消息项容器 */
-.message-item.data-v-2f1ef635 {
-  padding: 20rpx;
-  border-bottom: 1px solid #f0f0f0; 
+/* 未读红点脉冲动画 */
+@keyframes pulse-2f1ef635 {
+0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 2rpx 8rpx rgba(255, 107, 107, 0.3);
+}
+50% {
+    transform: scale(1.05);
+    box-shadow: 0 3rpx 12rpx rgba(255, 107, 107, 0.4);
+}
+}
+
+/* 空状态：优化视觉舒适度，避免单调 */
+.empty-container.data-v-2f1ef635 {
   display: flex;
   flex-direction: column;
-  transition: background-color 0.2s ease; 
-  border: 1px solid #e6e6e6; 
-  border-radius: 8rpx;
-  margin-bottom: 15rpx;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 0; /* 增加上下留白 */
+  gap: 28rpx; /* 增大间距 */
+}
+.empty-icon.data-v-2f1ef635 {
+  width: 180rpx; /* 增大图标 */
+  height: 180rpx;
+  opacity: 0.35; /* 降低透明度，更柔和 */
+  transition: opacity 0.3s ease;
+}
+.empty-container:hover .empty-icon.data-v-2f1ef635 {
+  opacity: 0.45; /* hover 时提升透明度，增加交互感 */
+}
+.empty-tip.data-v-2f1ef635 {
+  font-size: 30rpx; /* 增大字体 */
+  color: #a0aec0; /* 更柔和的灰色 */
+  line-height: 1.6;
+  padding: 0 40rpx;
+  text-align: center; /* 文字居中，避免左对齐的生硬 */
+}
+
+/* 消息项：核心优化，提升卡片质感 */
+.message-item.data-v-2f1ef635 {
+  padding: 28rpx 24rpx; /* 调整内边距 */
+  border: 1px solid #f0f4f8; /* 更浅的边框色 */
+  border-radius: 18rpx; /* 增大圆角 */
+  margin-bottom: 22rpx; /* 增大间距，避免拥挤 */
   background-color: #fff;
+  display: flex;
+  align-items: flex-start;
+  gap: 18rpx; /* 增大间距 */
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1); /* 更流畅的过渡曲线 */
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.02); /* 轻微阴影，提升层次感 */
 }
 
-/* 未读消息背景样式 */
-.unread.data-v-2f1ef635 {
-  background-color: #ffeaea; 
-  border-color: #ffcccc;
+/* 未读消息卡片：优化颜色，更显区分度 */
+.message-item.unread.data-v-2f1ef635 {
+  background-color: #fff8f9; /* 更柔和的未读底色 */
+  border-color: #ffe5e8; /* 更浅的未读边框 */
+  box-shadow: 0 4rpx 16rpx rgba(255, 107, 107, 0.03); /* 未读卡片加淡红色阴影 */
 }
 
-/* 消息标题样式 */
+/* 未读小点：优化大小和位置 */
+.unread-dot.data-v-2f1ef635 {
+  width: 18rpx; /* 增大尺寸 */
+  height: 18rpx;
+  border-radius: 50%;
+  background-color: #ff6b6b; /* 与未读数量颜色统一 */
+  margin-top: 10rpx; /* 调整位置，与文字对齐更协调 */
+}
+
+/* 消息内容容器：优化间距 */
+.msg-content.data-v-2f1ef635 {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx; /* 增大间距 */
+}
+
+/* 消息标题：强化视觉层级 */
 .message-title.data-v-2f1ef635 {
-  font-size: 30rpx;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 10rpx;
+  font-size: 30rpx; /* 增大字体 */
+  font-weight: 600;
+  color: #2d3748;
+  line-height: 1.5;
 }
 
-/* 消息内容样式 */
+/* 消息内容：优化换行和颜色 */
 .message-content.data-v-2f1ef635 {
-  font-size: 26rpx;
-  color: #666; 
-  line-height: 1.6; 
-
+  font-size: 26rpx; /* 增大字体，提升可读性 */
+  color: #718096; /* 与身份描述颜色统一，保持风格一致 */
+  line-height: 1.7; /* 增大行高，提升阅读舒适度 */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* 操作按钮容器 */
+/* 消息项点击态：更自然的反馈 */
+.msg-item-tap.data-v-2f1ef635 {
+  background-color: #f9fafb !important;
+  border-color: #e2e8f0;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.01);
+  transform: translateY(2rpx); /* 轻微下移，模拟按压感 */
+}
+
+/* 操作按钮容器：优化间距 */
 .action-buttons.data-v-2f1ef635 {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 15rpx;
+  gap: 18rpx; /* 增大间距，避免按钮拥挤 */
+  margin-top: 12rpx; /* 调整位置 */
 }
 
-/* 按钮基础样式 */
+/* 按钮基础样式：优化圆角和内边距 */
 .btn.data-v-2f1ef635 {
-  margin-left: 20rpx;
-  padding: 12rpx 24rpx; 
-  border-radius: 8rpx;
-  font-size: 24rpx; 
+  padding: 12rpx 24rpx; /* 调整内边距，按钮更饱满 */
+  border-radius: 12rpx; /* 增大圆角，更柔和 */
+  font-size: 26rpx; /* 增大字体 */
   border: none;
+  min-width: 130rpx; /* 增大最小宽度 */
+  transition: all 0.25s ease; /* 按钮过渡，提升交互感 */
 }
 
-/* 取消标红按钮样式 */
+/* 取消标红按钮：优化颜色，更清新 */
 .cancel-unread.data-v-2f1ef635 {
-  background-color: #70d770; 
-  color: #fff;
+  background-color: #edf7ff; /* 更淡的蓝色底 */
+  color: #1890ff;
+}
+.cancel-unread.data-v-2f1ef635:hover {
+  background-color: #e6f4ff; /* hover 时加深底色 */
+}
+.cancel-unread.data-v-2f1ef635:active {
+  background-color: #d1eaff; /* 点击时进一步加深 */
 }
 
-/* 删除按钮样式 */
+/* 删除按钮：优化颜色，更柔和 */
 .delete-msg.data-v-2f1ef635 {
-  background-color: #f75757; 
-  color: #fff;
+  background-color: #fff5f5; /* 更淡的红色底 */
+  color: #ff6b6b;
+}
+.delete-msg.data-v-2f1ef635:hover {
+  background-color: #fff0f0; /* hover 时加深底色 */
+}
+.delete-msg.data-v-2f1ef635:active {
+  background-color: #ffe6e6; /* 点击时进一步加深 */
 }
 
-/* 按钮点击反馈 */
+/* 按钮点击态：统一缩放效果 */
 .btn.data-v-2f1ef635:active {
-  opacity: 0.8;
-  transform: scale(0.98);
+  opacity: 0.9;
+  transform: scale(0.95); /* 轻微缩放，模拟按压感 */
+  transition: transform 0.1s ease;
+}
+
+/* 响应式优化：分档适配，覆盖更多设备 */
+/* 小屏手机（320px以下） */
+@media (max-width: 320px) {
+.nickname.data-v-2f1ef635 { font-size: 34rpx;
+}
+.desc.data-v-2f1ef635 { font-size: 26rpx;
+}
+.message-title.data-v-2f1ef635 { font-size: 28rpx;
+}
+.message-content.data-v-2f1ef635 { font-size: 24rpx;
+}
+.avatar-container.data-v-2f1ef635 { width: 120rpx; height: 120rpx;
+}
+.btn.data-v-2f1ef635 { font-size: 24rpx; min-width: 120rpx;
+}
+}
+
+/* 大屏手机/平板（750px以上） */
+@media (min-width: 750px) {
+.my-container.data-v-2f1ef635 {
+    max-width: 700rpx; /* 限制最大宽度，避免平板端内容过宽 */
+    margin: 0 auto; /* 水平居中 */
+    box-shadow: 0 0 30rpx rgba(0, 0, 0, 0.02); /* 加外阴影，模拟卡片效果 */
+}
+.profile-section.data-v-2f1ef635 {
+    border-radius: 0 0 36rpx 36rpx; /* 保持顶部通栏，底部圆角 */
+}
 }

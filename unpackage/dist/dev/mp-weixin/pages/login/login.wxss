@@ -97,39 +97,39 @@
 
 	/* 消息提示基础样式 */
 .msg.data-v-e4e4508d {
-			font-size: 26rpx;
-			text-align: center;
-			margin-top: 20rpx;
-			padding: 16rpx 20rpx;
-			border-radius: 10rpx;
-			width: 100%;
-			max-width: 500rpx; /* 补充完整：原代码截断为"max-width: 5"，此处修正为500rpx，与表单宽度一致 */
+		font-size: 26rpx;
+		text-align: center;
+		margin-top: 20rpx;
+		padding: 16rpx 20rpx;
+		border-radius: 10rpx;
+		width: 100%;
+		max-width: 500rpx;
+		/* 补充完整：原代码截断为"max-width: 5"，此处修正为500rpx，与表单宽度一致 */
 }
-	
-		/* 错误消息样式 */
+
+	/* 错误消息样式 */
 .error-msg.data-v-e4e4508d {
-			color: #f56c6c;
-			background: rgba(245, 108, 108, 0.1);
-			border: 1px solid #fde2e2;
+		color: #f56c6c;
+		background: rgba(245, 108, 108, 0.1);
+		border: 1px solid #fde2e2;
 }
-	
-		/* 成功消息样式 */
+
+	/* 成功消息样式 */
 .success-msg.data-v-e4e4508d {
-			color: #67c23a;
-			background: rgba(103, 194, 58, 0.1);
-			border: 1px solid #e1f3d8;
+		color: #67c23a;
+		background: rgba(103, 194, 58, 0.1);
+		border: 1px solid #e1f3d8;
 }
-	
-		/* 校园网提示样式 */
+
+	/* 校园网提示样式 */
 .campus-net-tip.data-v-e4e4508d {
-			font-size: 30rpx;
-			color: #666;
-			text-align: center;
-			padding: 10rpx 0;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			gap: 10rpx;
-			margin-top: 10rpx;
+		font-size: 30rpx;
+		color: #666;
+		text-align: center;
+		padding: 10rpx 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 10rpx;
+		margin-top: 10rpx;
 }
-	

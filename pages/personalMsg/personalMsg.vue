@@ -48,8 +48,6 @@ import { ref, reactive, onMounted } from 'vue';
 import { userInfoUtil } from '/utils/personnalMsg/userInfoUtil';
 import { logoutUtil } from '/utils/personnalMsg/logoutUtil';
 import { storageUtil } from '/utils/personnalMsg/storage.js';
-
-//  响应式数据
 const userInfo = reactive({
   avatar: '/static/default-avatar.png',
   name: '未设置',
@@ -60,38 +58,30 @@ const userInfo = reactive({
   major: '未设置',
   studentID: '未设置',
   teacherID: '',
+  department: '未设置' 
 });
 const infoItems = ref([]); 
-
-
-// 页面导航：返回上一页
 const navigateBack = () => {
   uni.navigateBack({ delta: 1 }).catch(() => {
-    uni.redirectTo({ url: '/pages/my/my' });
+    uni.switchTab({ url: '/pages/my/my' });
   });
 };
-
-
-// 信息编辑：调用userInfoUtil获取配置，避免硬编码
 const handleInfoEdit = (item) => {
   if (!item.canEdit) return;
   const editableFields = userInfoUtil.getEditableFields(userInfo.identity);
   const fieldConfig = editableFields.find(cfg => cfg.label === item.label);
   if (!fieldConfig) return;
 
-  // 下拉选择（性别）
   if (fieldConfig.type === 'select') {
     uni.showActionSheet({
       itemList: fieldConfig.options,
       success: (res) => {
         userInfo[fieldConfig.field] = fieldConfig.options[res.tapIndex];
-        updateInfoAndStorage(); // 同步列表+存储
+        updateInfoAndStorage();
       },
       fail: (err) => console.error('编辑失败:', err)
     });
-  } 
-  // 输入框（学院/班级/专业）
-  else if (fieldConfig.type === 'input') {
+  } else if (fieldConfig.type === 'input') {
     uni.showModal({
       title: `修改${item.label}`,
       editable: true,
@@ -100,21 +90,19 @@ const handleInfoEdit = (item) => {
       success: (res) => {
         if (res.confirm && res.content.trim()) {
           userInfo[fieldConfig.field] = res.content.trim();
-          updateInfoAndStorage(); // 同步列表+存储
+          updateInfoAndStorage();
         }
       },
       fail: (err) => console.error('编辑失败:', err)
     });
   }
 };
-
-
-//  同步信息列表+本地存储（调用工具简化逻辑）
+// 同步信息列表+本地存储
 const updateInfoAndStorage = () => {
   infoItems.value = userInfoUtil.generateInfoList(userInfo);
   storageUtil.saveUserInfo(userInfo);
 };
-// 退出登录：直接调用logoutUtil
+// 退出登录
 const handleLogout = () => {
   logoutUtil.doLogout(); 
 };
@@ -122,9 +110,9 @@ const handleLogout = () => {
 onMounted(() => {
   userInfoUtil.initFromStorage(userInfo);
   updateInfoAndStorage();
+  console.log('个人页初始化后身份信息:', userInfo.identity);
 });
 </script>
-    
 
 <style scoped>
 .profile-page {
@@ -261,11 +249,11 @@ onMounted(() => {
 
 .logout-container {
   display: flex;
-  flex-direction: column; /* 改为纵向排列：按钮在上，文字在下 */
+  flex-direction: column; 
   justify-content: center;
   margin-top: 60rpx;
   padding: 0 30rpx;
-  gap: 15rpx; /* 按钮和文字之间的间距 */
+  gap: 15rpx;
 }
 
 .logout-button {

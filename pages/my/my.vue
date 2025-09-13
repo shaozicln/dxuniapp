@@ -1,323 +1,491 @@
 <template>
   <view class="my-container">
-    <view class="profile-section" @tap="goToProfile"> 
-      <image 
-        class="avatar" 
-        :src="userInfo.avatarUrl" 
-        mode="aspectFill"
-        lazy-load 
-      ></image>
+    <!-- 个人信息区域 -->
+    <view class="profile-section" @tap="goToProfile" :hover-class="'profile-tap'"> 
+      <view class="avatar-container">
+        <image 
+          class="avatar" 
+          :src="userInfo.avatar" 
+          mode="aspectFill"
+          lazy-load 
+          @error="handleAvatarError" 
+        ></image>
+      </view>
       <view class="user-info-wrapper">
         <view class="user-info">
-          <text class="nickname">{{ userInfo.name }}</text>
-          <text class="desc">用户当前身份为：{{ userRole }}</text>
+		 <!-- {{ }} 是 Vue 中最基础的数据绑定方式，作用是 将双大括号内的表达式结果 “实时渲染” 到页面 -->	
+          <text class="nickname">{{ userInfo.name || '未设置昵称' }}</text>
+          <text class="desc">当前身份：{{ userRole || '未登录' }}</text>
         </view>
       </view>
     </view>
 
     <!-- 消息列表区域 -->
     <view class="message-section">
-      <view class="section-title">消息列表</view>
-      <view v-if="messageList.length === 0" class="empty-tip">暂无消息</view>
-      <block v-else v-for="(item, index) in messageList" :key="item.id"> 
-        <view 
-          class="message-item" 
-          :class="{ unread: item.unread }"
-          @tap="handleItemTap(item)"
-          @longpress="handleLongPress(index)"
-        >
-          <text class="message-title">{{ item.title }}</text>
-          <text class="message-content">{{ item.content }}</text>
-          <view class="action-buttons" v-if="item.unread">
-            <button 
-              class="btn cancel-unread" 
-              size="mini" 
-              @tap.stop="cancelUnread(index)"
-            >
-              取消标红
-            </button>
-            <button 
-              class="btn delete-msg" 
-              size="mini" 
-              @tap.stop="deleteMessage(index)"
-            >
-              删除
-            </button>
-          </view>
+      <view class="section-title">
+        <text>消息列表</text>
+        <view class="unread-count" v-if="unreadMsgCount > 0">
+          {{ unreadMsgCount }}
         </view>
-      </block>
+      </view>
+
+      <!-- 空状态 -->
+      <view class="empty-container" v-if="messageList.length === 0">
+        <image class="empty-icon" src="/static/icons/empty-msg.png" mode="widthFix"></image>
+        <text class="empty-tip">暂无消息，快去看看吧~</text>
+      </view>
+
+      <!-- 消息项 -->
+      <view 
+        class="message-item"
+        :class="{ unread: item.unread }"
+        @tap="handleItemTap(item, index)"
+        @longpress="handleLongPress(item, index)"
+        :hover-class="'msg-item-tap'"
+        v-for="(item, index) in messageList" 
+        :key="`msg-${item.id}`"
+      >
+        <view class="unread-dot" v-if="item.unread"></view>
+        
+        <view class="msg-content">
+          <text class="message-title">{{ item.title || '无标题消息' }}</text>
+          <text class="message-content">{{ item.content || '无内容' }}</text>
+        </view>
+
+        <!-- 操作按钮 -->
+        <view class="action-buttons" v-if="item.unread">
+          <button 
+            class="btn cancel-unread" 
+            size="mini" 
+            @tap.stop="cancelUnread(index)"
+          >
+            取消标红
+          </button>
+          <button 
+            class="btn delete-msg" 
+            size="mini" 
+            @tap.stop="deleteMessage(index)"
+          >
+            删除
+          </button>
+        </view>
+      </view>
     </view>
   </view>
 </template>
-<script setup lang="ts">
-import { reactive, onMounted, ref } from 'vue';
-import { navigateToWithLoading } from '../../utils/navigate/navigate'; 
-import { userInfoUtil } from '../../utils/personnalMsg/userInfoUtil';
 
-// 定义接口
-interface UserInfo {
-  avatar: string;
-  name: string;
-  identity: string;
-  gender?: string;
-  college?: string;
-  className?: string;
-  major?: string;
-  studentID?: string;
-  teacherID?: string;
-}
+<script setup>
+import { reactive, onMounted,  ref, computed } from 'vue';
+import { onShow, onUnload } from '@dcloudio/uni-app';
+import { userInfoManager } from '../../utils/my/userInfoManager';
+import { messageHandler } from '../../utils/my/messageHandler';
+import { navigationService } from '../../utils/my/navigationService';
+import { errorHandler } from '../../utils/my/errorHandler.js';
 
-interface MessageItem {
-  id: number;
-  title: string;
-  content: string;
-  unread: boolean;
-}
-
-// 响应式数据 - 只声明一次
-const userInfo = reactive<UserInfo>({
-   avatar: '/static/default-avatar.png',
+//  响应式数据
+const userInfo = reactive({
+  avatar: '/static/default-avatar.png', 
   name: '未设置',
-  identity: '未登录'
+  identity: '未登录', 
+  gender: '未设置',
+  college: '未设置',
+  className: '未设置',
+  major: '未设置',
+  studentID: '未设置',
+  teacherID: '未设置',
+  department: '未设置'
 });
 
-const userRole = ref<string>(userInfo.identity);
-const messageList = reactive<MessageItem[]>([
-  { id: 1, title: '系统通知', content: '新系统通知...', unread: true },
-  { id: 2, title: '互动消息', content: '学生发来的未读消息', unread: true }, 
-  { id: 3, title: '测试消息', content: '未读测试', unread: true }
+//  计算属性
+const userRole = computed(() => {
+  return userInfoManager.getValidIdentity(userInfo.identity);
+});
+
+const unreadMsgCount = computed(() => {
+  return messageHandler.getUnreadCount(messageList.value);
+});
+
+// 消息列表
+const messageList = ref([
+  { id: 1, title: '系统通知', content: '新系统通知已送达', unread: true },
+  { id: 2, title: '互动消息', content: '有学生提交了反馈', unread: true }, 
+  { id: 3, title: '待办提醒', content: '请及时完善个人信息', unread: true }
 ]);
 
-// 页面挂载逻辑
-onMounted(() => {
+const refreshUserInfo = async () => {
   try {
-    // 调用工具类初始化用户信息
-    userInfoUtil.initFromStorage(userInfo);
-    
-    // 同步身份信息到userRole
-    userRole.value = userInfo.identity;
-    
-    console.log('核心信息初始化完成：', { 
-      姓名: userInfo.name, 
-      身份: userRole.value 
-    });
+    const initSuccess = await userInfoManager.initUserInfo(userInfo);
+    if (!initSuccess) {
+      console.warn('用户信息刷新失败，使用默认值');
+      userInfo.identity = '未登录';
+    }
   } catch (err) {
-    console.error('核心信息初始化失败:', err);
-    uni.showToast({ title: '信息加载失败', icon: 'none' });
-    userRole.value = '身份未知';
+    errorHandler.handleUserInitError(
+      userInfo, 
+      err, 
+      () => navigationService.goToLogin()
+    );
   }
+};
+
+// 页面首次挂载：初始化一次
+onMounted(async () => {
+  await refreshUserInfo();
 });
 
-// 消息处理函数
-const handleItemTap = (item: MessageItem) => {
-  console.log('点击消息:', item);
-  if (item.unread) {
-    const index = messageList.findIndex(msg => msg.id === item.id);
-    if (index !== -1) messageList[index].unread = false;
-  }
-};
+// 每次页面显示（如登录后返回），重新刷新信息
+onShow(async () => {
+  await refreshUserInfo();
+});
 
-const cancelUnread = (index: number) => {
-  messageList[index].unread = false;
-};
-
-const deleteMessage = (index: number) => {
-  messageList.splice(index, 1);
-};
-
-const handleLongPress = (index: number) => {
-  const currentItem = messageList[index];
-  if (currentItem.unread) return; 
-
-  uni.showActionSheet({
-    itemList: ['恢复标红', '删除', '取消'],
-    success: (res) => {
-      if (res.tapIndex === 0) {
-        currentItem.unread = true; 
-      } else if (res.tapIndex === 1) {
-        deleteMessage(index);
-      }
-    },
-    fail: (err) => {
-      console.warn('长按菜单调用失败:', err);
-    }
+// 监听全局“登录成功”事件（登录后主动触发刷新）
+onMounted(() => {
+  uni.$on('loginSuccess', async () => {
+    console.log('收到登录成功事件，刷新用户信息');
+    await refreshUserInfo();
   });
+});
+
+onUnload(() => {
+  uni.$off('loginSuccess'); // 清除监听，防止重复触发
+});
+
+// 头像加载失败处理
+const handleAvatarError = (e) => {
+  errorHandler.handleAvatarError(e);
 };
 
+//  消息处理函数
+const handleItemTap = (item, index) => {
+  messageHandler.handleItemTap(messageList.value, item, index);
+};
+
+const cancelUnread = (index) => {
+  messageHandler.cancelUnread(messageList.value, index);
+};
+
+const deleteMessage = async (index) => {
+  await messageHandler.deleteMessage(messageList.value, index);
+};
+
+const handleLongPress = (item, index) => {
+  messageHandler.handleLongPress(messageList.value, item, index);
+};
+
+// 跳转个人信息编辑页
 const goToProfile = async () => {
-  try {
-    await navigateToWithLoading('/pages/personalMsg/personalMsg', {
-      loadingText: '加载中...',
-      onError: (err) => {
-        console.warn('跳转异常:', err);
-        uni.showToast({ title: '跳转失败', icon: 'none' }); 
-      }
-    });
-  } catch (err) {
-    console.error('跳转个人信息页失败:', err);
-    uni.showToast({ title: '跳转失败', icon: 'none' });
-  }
+  await navigationService.goToProfileEdit(
+    userRole.value, 
+    userInfo, 
+    [] // 如需排除敏感字段，在此添加，例如['token']
+  );
 };
 </script>
 
 <style scoped>
-
 .my-container {
   display: flex;
   flex-direction: column;
-  background-color: #f8fef8; 
+  background-color: #fafdff;
   min-height: 100vh;
+  padding-top: 30rpx;
+  padding-bottom: 15rpx;
+  transition: background-color 0.3s ease;
 }
 
-/* 个人信息区域 */
+/* 个人信息区域*/
 .profile-section {
-  position: relative;
   width: 100%;
-  height: 30vh;
-  background: linear-gradient(to bottom, #c9edf5, #f8fef8); 
+  min-height: 220rpx; 
+  background: linear-gradient(135deg, #e6f7ff, #fafdff);
   display: flex;
-  flex-direction: row;
   align-items: center;
-  padding: 0 40rpx;
+  padding: 32rpx 40rpx; 
+   padding-top: 100rpx;
   box-sizing: border-box;
-  margin-bottom: 0;
+  margin-bottom: 24rpx;
+  border-bottom-left-radius: 36rpx; 
+  border-bottom-right-radius: 36rpx;
+  box-shadow: 0 8rpx 20rpx rgba(180, 225, 255, 0.15); 
+  transition: all 0.3s ease; 
 }
 
-/* 头像样式 */
-.avatar {
-  width: 120rpx;
-  height: 120rpx;
+/* 头像容器 */
+.avatar-container {
+  width: 130rpx;
+  height: 130rpx;
   border-radius: 50%;
-  border: 3rpx solid #c9edf5; 
-  margin-right: 20rpx; 
-  object-fit: cover;
+  border: 4rpx solid #fff; 
+  overflow: hidden;
+  margin-right: 30rpx;
+  box-shadow: 0 4rpx 12rpx rgba(120, 200, 255, 0.2);
 }
 
-/* 用户信息包裹层 */
+.avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease; 
+}
+.avatar-container:hover .avatar {
+  transform: scale(1.05); 
+}
+
+/* 用户信息容器 */
 .user-info-wrapper {
   flex: 1;
   display: flex;
-  justify-content: flex-start; 
+  justify-content: space-between;
   align-items: center;
 }
 
-/* 用户信息内容 */
 .user-info {
   display: flex;
   flex-direction: column;
+  gap: 12rpx; 
 }
 
 /* 昵称样式 */
 .nickname {
-  font-size: 36rpx;
-  font-weight: bold;
-  color: #444; 
-  text-align: left; 
+  font-size: 38rpx; 
+  font-weight: 600;
+  color: #2d3748; 
+  line-height: 1.5;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.05); 
 }
 
-/* 描述文本样式 */
+/* 身份描述*/
 .desc {
-  font-size: 28rpx;
-  color: #777; 
-  margin-top: 8rpx;
-  text-align: left;
+  font-size: 28rpx; 
+  color: #718096; 
+  line-height: 1.5;
+}
+
+/* 箭头图标： */
+.arrow-icon {
+  width: 32rpx;
+  height: 32rpx;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+}
+.profile-section:hover .arrow-icon {
+  opacity: 1;
+  transform: translateX(4rpx); 
+}
+
+/* 个人信息区域点击态 */
+.profile-tap {
+  opacity: 0.95;
+  background: linear-gradient(135deg, #d9f0ff, #f5faff); 
+  box-shadow: 0 6rpx 18rpx rgba(180, 225, 255, 0.1);
 }
 
 /* 消息列表区域 */
 .message-section {
   flex: 1;
-  padding: 20rpx 10rpx;
+  padding: 0 24rpx;
   box-sizing: border-box;
 }
 
-/* 板块标题样式 */
+/* 列表标题 */
 .section-title {
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 20rpx;
-  border-left: 10rpx solid #90ee90; 
-  padding-left: 10rpx;
+  font-size: 34rpx; 
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 24rpx;
+  padding-left: 18rpx; 
+  border-left: 12rpx solid #87e8de; 
+  display: flex;
+  align-items: center;
+  gap: 12rpx; 
 }
 
-/* 空列表提示 */
-.empty-tip {
-  font-size: 28rpx;
-  color: #999;
-  text-align: center;
-  padding: 50rpx 0;
+/* 未读数量*/
+.unread-count {
+  width: 40rpx; 
+  height: 40rpx;
+  border-radius: 50%;
+  background-color: #ff6b6b; 
+  color: #fff;
+  font-size: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2rpx 8rpx rgba(255, 107, 107, 0.3); 
+  animation: pulse 2s infinite ease-in-out; 
 }
 
-/* 消息项容器 */
-.message-item {
-  padding: 20rpx;
-  border-bottom: 1px solid #f0f0f0; 
+/* 未读红点脉冲动画 */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 2rpx 8rpx rgba(255, 107, 107, 0.3);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 3rpx 12rpx rgba(255, 107, 107, 0.4);
+  }
+}
+
+/* 空状态 */
+.empty-container {
   display: flex;
   flex-direction: column;
-  transition: background-color 0.2s ease; 
-  border: 1px solid #e6e6e6; 
-  border-radius: 8rpx;
-  margin-bottom: 15rpx;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 0; 
+  gap: 28rpx;
+}
+
+.empty-icon {
+  width: 180rpx; 
+  height: 180rpx;
+  opacity: 0.35; 
+  transition: opacity 0.3s ease;
+}
+.empty-container:hover .empty-icon {
+  opacity: 0.45; 
+}
+
+.empty-tip {
+  font-size: 30rpx; 
+  color: #a0aec0;
+  line-height: 1.6;
+  padding: 0 40rpx;
+  text-align: center; 
+}
+
+/* 消息项*/
+.message-item {
+  padding: 28rpx 24rpx; 
+  border: 1px solid #f0f4f8; 
+  border-radius: 18rpx;
+  margin-bottom: 22rpx;
   background-color: #fff;
+  display: flex;
+  align-items: flex-start;
+  gap: 18rpx; 
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1); 
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.02); 
 }
 
-/* 未读消息背景样式 */
-.unread {
-  background-color: #ffeaea; 
-  border-color: #ffcccc;
+/* 未读消息卡片 */
+.message-item.unread {
+  background-color: #fff8f9;
+  border-color: #ffe5e8;
+  box-shadow: 0 4rpx 16rpx rgba(255, 107, 107, 0.03); 
 }
 
-/* 消息标题样式 */
+/* 未读小点*/
+.unread-dot {
+  width: 18rpx; 
+  height: 18rpx;
+  border-radius: 50%;
+  background-color: #ff6b6b;
+  margin-top: 10rpx;
+}
+
+/* 消息内容容器*/
+.msg-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx; 
+}
+
+/* 消息标题*/
 .message-title {
-  font-size: 30rpx;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 10rpx;
+  font-size: 30rpx; 
+  font-weight: 600;
+  color: #2d3748;
+  line-height: 1.5;
 }
 
-/* 消息内容样式 */
+/* 消息内容*/
 .message-content {
-  font-size: 26rpx;
-  color: #666; 
-  line-height: 1.6; 
-
+  font-size: 26rpx; 
+  color: #718096; 
+  line-height: 1.7;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* 操作按钮容器 */
+/* 消息项点击态*/
+.msg-item-tap {
+  background-color: #f9fafb !important;
+  border-color: #e2e8f0;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.01);
+  transform: translateY(2rpx); /
+}
+
+/* 操作按钮容器*/
 .action-buttons {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 15rpx; 
+  gap: 18rpx; 
+  margin-top: 12rpx; 
 }
 
-/* 按钮基础样式 */
+/* 按钮基础样式*/
 .btn {
-  margin-left: 20rpx;
   padding: 12rpx 24rpx; 
-  border-radius: 8rpx;
-  font-size: 24rpx; 
+  border-radius: 12rpx; 
+  font-size: 26rpx; 
   border: none;
+  min-width: 130rpx;
+  transition: all 0.25s ease;
 }
 
-/* 取消标红按钮样式 */
+/* 取消标红按钮*/
 .cancel-unread {
-  background-color: #70d770; 
-  color: #fff;
+  background-color: #edf7ff; 
+  color: #1890ff;
+}
+.cancel-unread:hover {
+  background-color: #e6f4ff;
+}
+.cancel-unread:active {
+  background-color: #d1eaff; 
 }
 
-/* 删除按钮样式 */
+
 .delete-msg {
-  background-color: #f75757; 
-  color: #fff;
+  background-color: #fff5f5; 
+  color: #ff6b6b;
+}
+.delete-msg:hover {
+  background-color: #fff0f0; 
+}
+.delete-msg:active {
+  background-color: #ffe6e6; 
 }
 
-/* 按钮点击反馈 */
+/* 按钮点击态 */
 .btn:active {
-  opacity: 0.8;
-  transform: scale(0.98);
+  opacity: 0.9;
+  transform: scale(0.95); 
+  transition: transform 0.1s ease;
+}
+
+/* 应用端适应*/
+@media (max-width: 320px) {
+  .nickname { font-size: 34rpx; }
+  .desc { font-size: 26rpx; }
+  .message-title { font-size: 28rpx; }
+  .message-content { font-size: 24rpx; }
+  .avatar-container { width: 120rpx; height: 120rpx; }
+  .btn { font-size: 24rpx; min-width: 120rpx; }
+}
+@media (min-width: 750px) {
+  .my-container {
+    max-width: 700rpx; 
+    margin: 0 auto; 
+    box-shadow: 0 0 30rpx rgba(0, 0, 0, 0.02);
+  }
+  .profile-section {
+    border-radius: 0 0 36rpx 36rpx; 
+  }
 }
 </style>

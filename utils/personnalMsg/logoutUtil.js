@@ -17,7 +17,7 @@ export const logoutUtil = {
 
   async _handleLogoutRequest(redirectCb) {
     try {
-      // 2. 获取本地Token
+      // 获取本地Token
       const token = uni.getStorageSync('autoToken') || uni.getStorageSync('token');
       if (!token) {
         console.warn('logoutUtil: 本地无有效Token，直接清除状态');
@@ -34,7 +34,7 @@ export const logoutUtil = {
       // 处理接口响应
       if (res?.code === 200) {
         console.log('logoutUtil: 后端退出成功');
-        uni.showToast({ title: '已退出登录', icon: 'none', duration: 1500 });
+        uni.showToast({ title: '已退出登录', icon: 'none', duration: 500 });
         this._clearLoginState(redirectCb);
       } else {
         console.error('logoutUtil: 后端退出失败', res);

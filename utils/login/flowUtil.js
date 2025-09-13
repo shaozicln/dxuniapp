@@ -15,13 +15,13 @@ export const loginFlowUtil = {
     });
   },
 
-  // 自动登录流程（调用后端/loginByCode
+  // 自动登录流程（调用后端/loginByCode)
   async autoLogin(wxCode) {
     console.log('调用后端/loginByCode接口，请求自动登录');
     const autoLoginRes = await post('https://jxpj.neau.edu.cn/api/v1/loginByCode', {
       weixincode: wxCode
     });
-    // 从本地获取userID（需确保之前有存储）
+    // 从本地获取userID
     const userID = uni.getStorageSync('userID') || '';
     return { autoLoginRes, userID };
   },
@@ -47,6 +47,7 @@ export const loginFlowUtil = {
 
     // 校验学工号格式（A/a + 8位数字）
     if (/^[Aa]/.test(trimmedUserID)) {
+		//.test(trimmedUserID): 测试trimmedUserID是否符合该正则模式
       if (!/^[Aa]\d{8}$/.test(trimmedUserID)) {
         throw new Error('学工号格式错误（应为A/a+8位数字，如A19230111）');
       }

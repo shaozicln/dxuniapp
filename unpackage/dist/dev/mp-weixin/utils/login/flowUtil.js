@@ -17,7 +17,7 @@ const loginFlowUtil = {
       });
     });
   },
-  // 自动登录流程（调用后端/loginByCode
+  // 自动登录流程（调用后端/loginByCode)
   async autoLogin(wxCode) {
     common_vendor.index.__f__("log", "at utils/login/flowUtil.js:20", "调用后端/loginByCode接口，请求自动登录");
     const autoLoginRes = await utils_request_request.post("https://jxpj.neau.edu.cn/api/v1/loginByCode", {

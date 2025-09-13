@@ -12,6 +12,7 @@ const loginStorageUtil = {
     };
   },
   //存储自动登录数据到本地
+  //userInfo = null表示第二个参数是可选的，如果不提供则默认为null值
   saveAutoLoginData(token, userInfo = null) {
     common_vendor.index.setStorageSync("autoToken", token);
     if (userInfo) {
@@ -34,7 +35,7 @@ const loginStorageUtil = {
   },
   completeUserIdentity(localUser) {
     if ((localUser == null ? void 0 : localUser.userID) && !localUser.teacherID && !localUser.studentID) {
-      common_vendor.index.__f__("log", "at utils/login/storageUtil.js:36", "补全本地用户身份字段（teacherID/studentID）");
+      common_vendor.index.__f__("log", "at utils/login/storageUtil.js:37", "补全本地用户身份字段（teacherID/studentID）");
       return {
         ...localUser,
         teacherID: localUser.userID.startsWith("Z") ? localUser.userID : "",

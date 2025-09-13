@@ -15,12 +15,13 @@ const _sfc_main = {
       className: "未设置",
       major: "未设置",
       studentID: "未设置",
-      teacherID: ""
+      teacherID: "",
+      department: "未设置"
     });
     const infoItems = common_vendor.ref([]);
     const navigateBack = () => {
       common_vendor.index.navigateBack({ delta: 1 }).catch(() => {
-        common_vendor.index.redirectTo({ url: "/pages/my/my" });
+        common_vendor.index.switchTab({ url: "/pages/my/my" });
       });
     };
     const handleInfoEdit = (item) => {
@@ -37,7 +38,7 @@ const _sfc_main = {
             userInfo[fieldConfig.field] = fieldConfig.options[res.tapIndex];
             updateInfoAndStorage();
           },
-          fail: (err) => common_vendor.index.__f__("error", "at pages/personalMsg/personalMsg.vue:90", "编辑失败:", err)
+          fail: (err) => common_vendor.index.__f__("error", "at pages/personalMsg/personalMsg.vue:82", "编辑失败:", err)
         });
       } else if (fieldConfig.type === "input") {
         common_vendor.index.showModal({
@@ -51,7 +52,7 @@ const _sfc_main = {
               updateInfoAndStorage();
             }
           },
-          fail: (err) => common_vendor.index.__f__("error", "at pages/personalMsg/personalMsg.vue:106", "编辑失败:", err)
+          fail: (err) => common_vendor.index.__f__("error", "at pages/personalMsg/personalMsg.vue:96", "编辑失败:", err)
         });
       }
     };
@@ -65,6 +66,7 @@ const _sfc_main = {
     common_vendor.onMounted(() => {
       utils_personnalMsg_userInfoUtil.userInfoUtil.initFromStorage(userInfo);
       updateInfoAndStorage();
+      common_vendor.index.__f__("log", "at pages/personalMsg/personalMsg.vue:113", "个人页初始化后身份信息:", userInfo.identity);
     });
     return (_ctx, _cache) => {
       return {

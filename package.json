@@ -21,6 +21,7 @@
     "@dcloudio/uni-cli-i18n": "^2.0.2-4070620250821001",
     "@dcloudio/uni-cli-shared": "^3.0.0-4070620250821001",
     "@dcloudio/uni-mp-weixin": "^3.0.0-4070620250821001",
+    "@types/uni-app": "^1.4.8",
     "@vitejs/plugin-vue": "^1.10.2",
     "vite": "^2.9.16"
   }

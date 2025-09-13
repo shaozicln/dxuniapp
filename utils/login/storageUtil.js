@@ -11,6 +11,7 @@ export const loginStorageUtil = {
     };
   },
 //存储自动登录数据到本地
+//userInfo = null表示第二个参数是可选的，如果不提供则默认为null值
   saveAutoLoginData(token, userInfo = null) {
     uni.setStorageSync('autoToken', token);
     if (userInfo) {

@@ -3,127 +3,166 @@ const common_vendor = require("../../common/vendor.js");
 const utils_login_msgUtil = require("../../utils/login/msgUtil.js");
 const utils_login_flowUtil = require("../../utils/login/flowUtil.js");
 const utils_login_storageUtil = require("../../utils/login/storageUtil.js");
+const utils_login_getInfo = require("../../utils/login/getInfo.js");
 const _sfc_main = {
   data() {
-    common_vendor.index.__f__("log", "at pages/login/login.vue:32", "登录页组件初始化 - data数据初始化完成");
+    common_vendor.index.__f__("log", "at pages/login/login.vue:43", "登录页组件初始化 - data数据初始化完成");
     return {
       showLoginForm: false,
-      // 是否显示登录表单
       form: {
         userID: "",
         name: ""
       },
       msg: "",
-      // 提示消息
       msgType: "",
-      // 消息类型：error/success
       isLoading: false,
-      // 加载状态
       msgTimer: null
-      // 消息定时器（防止重复触发）
     };
   },
   onLoad() {
-    common_vendor.index.__f__("log", "at pages/login/login.vue:47", "登录页onLoad生命周期触发 - 开始执行初始化逻辑");
+    common_vendor.index.__f__("log", "at pages/login/login.vue:58", "登录页onLoad生命周期触发 - 开始执行初始化逻辑");
     this.initLoginFlow();
   },
   methods: {
     async initLoginFlow() {
-      common_vendor.index.__f__("log", "at pages/login/login.vue:53", "进入initLoginFlow - 启动自动登录流程");
+      common_vendor.index.__f__("log", "at pages/login/login.vue:64", "进入initLoginFlow - 启动自动登录流程");
       this.isLoading = true;
       try {
         const wxCode = await utils_login_flowUtil.loginFlowUtil.getWxCode();
-        common_vendor.index.__f__("log", "at pages/login/login.vue:58", "自动获取微信code成功:", wxCode);
-        const { autoLoginRes, userID } = await utils_login_flowUtil.loginFlowUtil.autoLogin(wxCode);
+        common_vendor.index.__f__("log", "at pages/login/login.vue:68", "自动获取微信code成功:", wxCode);
+        const {
+          autoLoginRes,
+          userID
+        } = await utils_login_flowUtil.loginFlowUtil.autoLogin(wxCode);
         if ((autoLoginRes == null ? void 0 : autoLoginRes.token) && userID) {
-          common_vendor.index.__f__("log", "at pages/login/login.vue:65", "后端获取成功，成功获取到用户信息", { token: autoLoginRes.token });
+          common_vendor.index.__f__("log", "at pages/login/login.vue:76", "后端获取成功，成功获取到用户信息", {
+            token: autoLoginRes.token
+          });
           const userInfo = utils_login_storageUtil.loginStorageUtil.buildUserInfo(
             userID,
             autoLoginRes.name,
             autoLoginRes.token
           );
           utils_login_storageUtil.loginStorageUtil.saveAutoLoginData(autoLoginRes.token, userInfo);
+          common_vendor.index.__f__("log", "at pages/login/login.vue:86", "自动登录成功，开始获取用户身份信息");
+          await utils_login_getInfo.getInfo._handleGetInfoRequest(() => {
+            this.showLoginForm = true;
+            utils_login_msgUtil.loginMsgUtil.showMsg(this, "身份验证失败，请重新登录", "error");
+          });
           utils_login_msgUtil.loginMsgUtil.showMsg(this, "自动登录成功，正在跳转", "success");
         } else if (autoLoginRes == null ? void 0 : autoLoginRes.token) {
-          common_vendor.index.__f__("log", "at pages/login/login.vue:76", "自动登录仅获取到token，缺少用户信息");
+          common_vendor.index.__f__("log", "at pages/login/login.vue:94", "自动登录仅获取到token，缺少用户信息");
           utils_login_storageUtil.loginStorageUtil.saveAutoLoginData(autoLoginRes.token);
           utils_login_msgUtil.loginMsgUtil.showMsg(this, "需补充用户信息，请手动登录", "error");
         } else {
-          common_vendor.index.__f__("log", "at pages/login/login.vue:80", "自动登录失败，未获取到有效token");
+          common_vendor.index.__f__("log", "at pages/login/login.vue:98", "自动登录失败，未获取到有效token");
           utils_login_msgUtil.loginMsgUtil.showMsg(this, "自动登录失败，请手动登录", "error");
         }
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/login/login.vue:85", "自动登录流程异常:", err);
+        common_vendor.index.__f__("error", "at pages/login/login.vue:103", "自动登录流程异常:", {
+          errMsg: err.message,
+          stack: err.stack
+        });
         utils_login_msgUtil.loginMsgUtil.showMsg(this, `自动登录失败: ${err.message || "网络异常"}`, "error");
       } finally {
         await this.checkLocalToken();
         this.isLoading = false;
-        common_vendor.index.__f__("log", "at pages/login/login.vue:91", "自动登录流程结束，已执行本地Token校验");
+        common_vendor.index.__f__("log", "at pages/login/login.vue:111", "自动登录流程结束，已执行本地Token校验");
       }
     },
     async checkLocalToken() {
-      common_vendor.index.__f__("log", "at pages/login/login.vue:95", "进入checkLocalToken - 校验本地登录状态");
+      var _a;
+      common_vendor.index.__f__("log", "at pages/login/login.vue:116", "进入checkLocalToken - 校验本地登录状态");
       this.isLoading = true;
       try {
-        const { localAutoToken, localManualToken, localUser } = utils_login_storageUtil.loginStorageUtil.getLocalLoginData();
-        common_vendor.index.__f__("log", "at pages/login/login.vue:100", "本地存储数据校验:", {
+        const {
+          localAutoToken,
+          localManualToken,
+          localUser
+        } = utils_login_storageUtil.loginStorageUtil.getLocalLoginData();
+        common_vendor.index.__f__("log", "at pages/login/login.vue:124", "本地存储数据校验:", {
           hasAutoToken: !!localAutoToken,
           hasManualToken: !!localManualToken,
           hasUserInfo: !!localUser,
-          userID: (localUser == null ? void 0 : localUser.userID) || "无"
+          userID: (localUser == null ? void 0 : localUser.userID) || "无",
+          userIdentity: (localUser == null ? void 0 : localUser.userIdentity) || "未获取"
         });
-        let completeUser = utils_login_storageUtil.loginStorageUtil.completeUserIdentity(localUser);
-        if (completeUser !== localUser) {
+        let completeUser = {
+          ...localUser
+        };
+        if (!completeUser.userIdentity) {
+          completeUser.userIdentity = ((_a = completeUser.teacherID) == null ? void 0 : _a.startsWith("Z")) ? "教师" : completeUser.studentID ? "学生" : "未登录";
           common_vendor.index.setStorageSync("userInfo", completeUser);
         }
         const hasValidToken = localAutoToken || localManualToken;
-        const hasCompleteUser = (completeUser == null ? void 0 : completeUser.userID) && (completeUser.teacherID || completeUser.studentID);
+        const hasCompleteUser = (completeUser == null ? void 0 : completeUser.userID) && (completeUser == null ? void 0 : completeUser.userIdentity);
         if (hasValidToken && hasCompleteUser) {
-          common_vendor.index.__f__("log", "at pages/login/login.vue:118", "本地登录状态有效，跳转首页");
+          common_vendor.index.__f__("log", "at pages/login/login.vue:145", "本地登录状态有效，跳转首页", {
+            userIdentity: completeUser.userIdentity
+          });
           setTimeout(() => {
             common_vendor.index.setStorageSync("isLogin", true);
-            common_vendor.index.switchTab({ url: "/pages/index/index" });
+            common_vendor.index.switchTab({
+              url: "/pages/index/index"
+            });
           }, 1e3);
         } else {
-          common_vendor.index.__f__("log", "at pages/login/login.vue:124", "本地登录状态无效，显示登录表单");
+          common_vendor.index.__f__("log", "at pages/login/login.vue:155", "本地登录状态无效（缺Token或身份），显示登录表单");
           this.showLoginForm = true;
         }
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/login/login.vue:129", "本地Token校验异常:", err);
+        common_vendor.index.__f__("error", "at pages/login/login.vue:160", "本地Token校验异常:", {
+          errMsg: err.message,
+          stack: err.stack
+        });
         utils_login_msgUtil.loginMsgUtil.showMsg(this, "登录状态校验失败，请重试", "error");
         this.showLoginForm = true;
       } finally {
         this.isLoading = false;
-        common_vendor.index.__f__("log", "at pages/login/login.vue:134", "localToken校验流程结束");
+        common_vendor.index.__f__("log", "at pages/login/login.vue:168", "localToken校验流程结束");
       }
     },
     async handleLogin() {
-      common_vendor.index.__f__("log", "at pages/login/login.vue:138", "进入handleLogin - 执行手动登录");
+      common_vendor.index.__f__("log", "at pages/login/login.vue:173", "进入handleLogin - 执行手动登录");
       this.isLoading = true;
       try {
-        const { trimmedUserID, trimmedName } = utils_login_flowUtil.loginFlowUtil.validateInput(
+        const {
+          trimmedUserID,
+          trimmedName
+        } = utils_login_flowUtil.loginFlowUtil.validateInput(
           this.form.userID,
           this.form.name
         );
         const wxCode = await utils_login_flowUtil.loginFlowUtil.getWxCode();
         const loginRes = await utils_login_flowUtil.loginFlowUtil.manualLogin(wxCode, trimmedUserID);
         if (loginRes == null ? void 0 : loginRes.token) {
-          common_vendor.index.__f__("log", "at pages/login/login.vue:155", "手动登录成功，获取到token:", loginRes.token);
+          common_vendor.index.__f__("log", "at pages/login/login.vue:188", "手动登录成功，获取到token:", loginRes.token);
           const userInfo = utils_login_storageUtil.loginStorageUtil.buildUserInfo(
             trimmedUserID,
             trimmedName,
-            loginRes.token
+            loginRes.token,
+            ""
           );
           utils_login_storageUtil.loginStorageUtil.saveManualLoginData(loginRes.token, userInfo);
+          common_vendor.index.__f__("log", "at pages/login/login.vue:197", "手动登录成功，开始获取用户身份信息");
+          await utils_login_getInfo.getInfo._handleGetInfoRequest(() => {
+            this.showLoginForm = true;
+            utils_login_msgUtil.loginMsgUtil.showMsg(this, "身份验证失败，请重新登录", "error");
+          });
           utils_login_msgUtil.loginMsgUtil.showMsg(this, "登录成功，正在跳转", "success");
           setTimeout(() => {
-            common_vendor.index.switchTab({ url: "/pages/index/index" });
+            common_vendor.index.switchTab({
+              url: "/pages/index/index"
+            });
           }, 1e3);
         } else {
           throw new Error((loginRes == null ? void 0 : loginRes.msg) || "登录失败，请检查账号信息是否正确");
         }
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/login/login.vue:173", "手动登录异常:", err);
+        common_vendor.index.__f__("error", "at pages/login/login.vue:214", "手动登录异常:", {
+          errMsg: err.message,
+          stack: err.stack
+        });
         utils_login_msgUtil.loginMsgUtil.showMsg(this, err.message || "登录异常，请重试", "error");
       } finally {
         this.isLoading = false;
@@ -131,7 +170,7 @@ const _sfc_main = {
     }
   },
   onUnload() {
-    common_vendor.index.__f__("log", "at pages/login/login.vue:181", "登录页onUnload生命周期触发");
+    common_vendor.index.__f__("log", "at pages/login/login.vue:226", "登录页onUnload生命周期触发");
     utils_login_msgUtil.loginMsgUtil.clearMsgTimer(this);
   }
 };

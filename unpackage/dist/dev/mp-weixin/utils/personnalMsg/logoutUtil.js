@@ -30,7 +30,7 @@ const logoutUtil = {
       );
       if ((res == null ? void 0 : res.code) === 200) {
         common_vendor.index.__f__("log", "at utils/personnalMsg/logoutUtil.js:36", "logoutUtil: 后端退出成功");
-        common_vendor.index.showToast({ title: "已退出登录", icon: "none", duration: 1500 });
+        common_vendor.index.showToast({ title: "已退出登录", icon: "none", duration: 500 });
         this._clearLoginState(redirectCb);
       } else {
         common_vendor.index.__f__("error", "at utils/personnalMsg/logoutUtil.js:40", "logoutUtil: 后端退出失败", res);
